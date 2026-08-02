@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "duration": 60.0,
+  "policy": {
+    "baseline_policy": "same_as_normal",
+    "normal_baseline": 950,
+    "onset_tolerance_frames": 1,
+    "density": {
+      "yellow_every_sentences": [2, 3],
+      "max_ck_per_minute": 6,
+      "min_plain_sentence_between_strong_events": 1
+    },
+    "sfx": {
+      "dialogue_first": true,
+      "default_gain_db": -4.0,
+      "allow_auto_only_when_reference_confidence_is_high": true
+    }
+  },
+  "accents": [
+    {
+      "id": "example-keyword",
+      "cue_ids": [3],
+      "phrase": "核心关键词",
+      "level": "L1",
+      "score": 5,
+      "semantic_role": "memorable_keyword",
+      "reason": "值得记住，但不需要中断阅读节奏"
+    }
+  ],
+  "events": [
+    {
+      "id": "example-result",
+      "cue_ids": [8],
+      "lines": ["关键结果"],
+      "level": "L2",
+      "score": 7,
+      "semantic_role": "result_reveal",
+      "reason": "改变观众理解的结果落点",
+      "template": "rise_settle",
+      "onset_anchor": "first_stressed_syllable",
+      "hold_until": "complete_spoken_thought",
+      "sfx": "none",
+      "sfx_offset": 0.0,
+      "sfx_gain_db": 0.0
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "制作两分钟短剧解说"
+  short_description: "跨越四至八集制作高吸引力旁白完整对白与动态字幕成片"
+  default_prompt: "Use $produce-two-minute-drama-recap to turn a continuous 4–8 episode short-drama arc into a roughly two-minute narrated recap with complete dialogue and designed captions."

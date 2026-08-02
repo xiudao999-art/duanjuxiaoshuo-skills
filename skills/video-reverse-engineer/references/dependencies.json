@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "distributionPolicy": "Companion skills are installed independently as siblings and are never vendored into video-reverse-engineer.",
+  "requiredSkills": [
+    "hyperframes",
+    "video-use",
+    "continuous-story-video",
+    "minimax-emotional-narration",
+    "hyperframes-core",
+    "hyperframes-creative",
+    "hyperframes-animation",
+    "hyperframes-cli"
+  ],
+  "conditionalSkills": [
+    {
+      "name": "script-aligned-subtitles",
+      "when": "An approved or locked script must remain the canonical caption text."
+    },
+    {
+      "name": "seedance-video-director",
+      "when": "The user requests generated photoreal media for reconstruction slots."
+    },
+    {
+      "name": "qishui-ad-orchestrator",
+      "when": "The source or target is a Qishui Music advertisement."
+    }
+  ],
+  "onDemandSkills": [
+    {
+      "name": "hyperframes-keyframes",
+      "when": "Advanced keyframes, paths, masks, morphs, FLIP, or 3D motion are authored."
+    },
+    {
+      "name": "hyperframes-media",
+      "when": "The reconstruction modifies or generates audio, captions, or other media."
+    },
+    {
+      "name": "hyperframes-registry",
+      "when": "A registry block or component is installed."
+    },
+    {
+      "name": "media-use",
+      "when": "New BGM, SFX, image, or icon assets must be resolved and frozen."
+    }
+  ],
+  "runtime": {
+    "python": ">=3.10,<3.12; project default 3.11",
+    "pythonOwner": ".codex/skills/video-use/pyproject.toml",
+    "pythonImports": [
+      "cv2",
+      "numpy",
+      "scenedetect",
+      "torch",
+      "transnetv2_pytorch"
+    ],
+    "node": ">=22",
+    "nodeOwner": "Target project package.json or a compatible project-local harness",
+    "nodePackages": [
+      "ffmpeg-static",
+      "ffprobe-static",
+      "gsap",
+      "hyperframes"
+    ],
+    "optionalCredential": "ELEVENLABS_API_KEY is required only when video-use must acquire a new Scribe transcript."
+  }
+}

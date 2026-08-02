@@ -1,0 +1,4 @@
+interface:
+  display_name: "剪映可迁移工程打包"
+  short_description: "收集全部项目依赖并生成可跨机器安装和验证的剪映工程包"
+  default_prompt: "将这个剪映草稿打包为包含全部物料、可在另一台机器安装并直接打开的工程包。"

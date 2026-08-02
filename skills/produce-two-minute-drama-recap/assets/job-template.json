@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "title": "",
+  "dramaTitle": "",
+  "targetDurationSeconds": 120,
+  "episodeRange": {
+    "start": 1,
+    "end": 4,
+    "episodes": [1, 2, 3, 4],
+    "skipReasons": []
+  },
+  "centralQuestion": "",
+  "payoffDecision": "",
+  "units": [
+    {
+      "id": "U1",
+      "function": "hook",
+      "episodes": [1],
+      "expectation": "",
+      "action": "",
+      "reaction": "",
+      "consequence": "",
+      "turnType": "relationship",
+      "narration": "",
+      "visualEvidence": [
+        {"episode": 1, "start": 0.0, "end": 3.0, "reason": ""}
+      ],
+      "dialogueIds": []
+    }
+  ],
+  "dialogues": [
+    {
+      "id": "D1",
+      "episode": 1,
+      "start": 0.0,
+      "end": 6.0,
+      "durationSeconds": 6.0,
+      "text": "",
+      "function": "promise",
+      "completeSentence": true,
+      "preRollSeconds": 0.12,
+      "postRollSeconds": 0.35
+    }
+  ],
+  "narrationCharacterCount": 0,
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 25,
+    "narrationSpeed": 1.25,
+    "sourcePlaybackSpeed": 1.0,
+    "blockSpeechLoudnessLufs": -15.0,
+    "displayPunctuation": false,
+    "captionWordSafe": true,
+    "captionFontSizePx": 88,
+    "twoLineBaselineGapPx": 160,
+    "minimumTwoLineGapEm": 1.65,
+    "finalNarrationTailSeconds": 0.45,
+    "minimumMeasuredTailSilenceSeconds": 0.35,
+    "sourceNotice": "视频来自《剧名》"
+  }
+}

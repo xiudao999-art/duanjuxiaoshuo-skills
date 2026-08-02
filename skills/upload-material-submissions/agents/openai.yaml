@@ -1,0 +1,4 @@
+interface:
+  display_name: "素材提报批量上传"
+  short_description: "批量上传短剧成片至指定 OSS 并创建可恢复的素材提报记录"
+  default_prompt: "Use $upload-material-submissions to inventory and safely upload finished drama videos."

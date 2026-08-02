@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+upload-manifests/
+outputs/
+dist/
+node_modules/
+.DS_Store
+Thumbs.db

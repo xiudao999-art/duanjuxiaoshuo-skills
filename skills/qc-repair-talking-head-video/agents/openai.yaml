@@ -1,0 +1,4 @@
+interface:
+  display_name: "口播视频语义质检与修复"
+  short_description: "质检并修复口播视频的语义内容、字幕边界、剪口与技术质量"
+  default_prompt: "Use $qc-repair-talking-head-video to audit and repair this talking-head video before delivery."

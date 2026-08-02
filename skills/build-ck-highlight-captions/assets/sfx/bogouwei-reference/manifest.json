@@ -1,0 +1,16 @@
+{
+  "source_video": "D:/codex/短剧剪辑/泊狗位.mp4",
+  "source_analysis": "D:/codex/短剧剪辑/analysis/泊狗位-vre/ck-audio-analysis.json",
+  "separation_model": "UVR-MDX-NET-Inst_HQ_3.onnx",
+  "license_scope": "User-supplied reference-derived assets; keep local and do not redistribute.",
+  "sample_rate": 44100,
+  "clips": {
+    "rise_settle.wav": {"source_start": 0.680, "duration": 0.430, "confidence": "low", "note": "No strong isolated transient; mostly reference ambience."},
+    "char_toss.wav": {"source_start": 6.910, "duration": 0.500, "confidence": "high", "transient": 6.949},
+    "stretch_reveal.wav": {"source_start": 17.120, "duration": 0.420, "confidence": "medium", "transient": 17.160},
+    "fade_snap.wav": {"source_start": 18.450, "duration": 0.420, "confidence": "low", "note": "No onset-locked isolated transient; use only when exact reference flavor is required."},
+    "light_sweep.wav": {"source_start": 38.580, "duration": 0.460, "confidence": "high", "transient": 38.632},
+    "light_sweep_pair.wav": {"source_start": 39.180, "duration": 0.460, "confidence": "high", "transient": 39.236},
+    "type_on.wav": {"source_start": 46.720, "duration": 0.650, "confidence": "high", "transient": 46.762}
+  }
+}

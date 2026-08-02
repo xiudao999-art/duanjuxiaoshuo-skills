@@ -1,0 +1,4 @@
+interface:
+  display_name: "短剧精彩片段制作"
+  short_description: "将短剧脚本文案制作成完整对白与旁白交错的竖屏成片流程"
+  default_prompt: "Use $produce-short-drama-highlight to turn the approved short-drama highlight script into a QC-checked vertical MP4."

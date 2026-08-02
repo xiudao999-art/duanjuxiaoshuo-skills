@@ -1,0 +1,4 @@
+interface:
+  display_name: "CK重点字幕包装"
+  short_description: "规划并烧录分级字幕、CK弹字与同步音效"
+  default_prompt: "Use $build-ck-highlight-captions to create one reusable emphasis plan from the approved Chinese script and word timings, compile L1 accents and L2/L3 CK events, bind semantic motion/SFX templates, burn them last, and run timing/layout QC."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Video Reverse Engineer"
+  short_description: "Reverse videos into scene graphs and HyperFrames"
+  default_prompt: "Use $video-reverse-engineer to analyze this video into a reconstruction manifest and HyperFrames project."

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Continuous Story Video"
+  short_description: "QA and repair continuous AI story videos"
+  default_prompt: "Use $continuous-story-video to plan, generate, check, and repair a continuous AI story video from my script and storyboard references."
+
+policy:
+  allow_implicit_invocation: true

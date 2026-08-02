@@ -1,0 +1,4 @@
+interface:
+  display_name: "Script-Aligned Subtitles"
+  short_description: "Burn subtitles from approved scripts with ASR timing."
+  default_prompt: "Use $script-aligned-subtitles to burn subtitles that keep the approved script text while using ASR timing."
