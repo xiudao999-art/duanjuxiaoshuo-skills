@@ -1,0 +1,4 @@
+interface:
+  display_name: "高点击率视频封面"
+  short_description: "从视频选帧、提取无字幕原帧并制作高点击率竖版封面图"
+  default_prompt: "Use $build-eye-catching-video-cover to select a strong clean frame and create a polished vertical video cover with an exact title and content-derived subtitle."

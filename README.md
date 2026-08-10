@@ -9,6 +9,7 @@
 | `produce-two-minute-drama-recap` | 制作约两分钟、横跨 4–8 集的短剧解说成片 |
 | `produce-short-drama-highlight` | 根据批准文案制作旁白与完整原剧对白混剪 |
 | `build-ck-highlight-captions` | 生成普通字幕、CK 强调字、弹出动画与同步音效 |
+| `build-eye-catching-video-cover` | 从本地视频筛选候选帧并制作高点击率竖版封面 |
 | `script-aligned-subtitles` | 使用 ASR 时间戳对齐批准脚本，避免错字和断词 |
 | `minimax-emotional-narration` | 规划并生成 MiniMax 中文情绪旁白 |
 | `qc-repair-talking-head-video` | 检查并修复字幕、断句、响度、黑帧和尾句问题 |
