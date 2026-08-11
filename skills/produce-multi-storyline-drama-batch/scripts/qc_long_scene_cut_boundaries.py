@@ -41,7 +41,7 @@ def collect_cuts(job: dict, audit: list[dict]) -> list[dict]:
         elapsed = 0.0
         clips = block["clips"]
         for index, clip in enumerate(clips[:-1]):
-            elapsed += float(clip["clip_duration"])
+            elapsed += float(clip["clip_duration"]) + float(clip.get("hold_after") or 0)
             cuts.append({
                 "time": narration_starts[block["block"]] + elapsed,
                 "kind": "picture",
@@ -53,6 +53,38 @@ def collect_cuts(job: dict, audit: list[dict]) -> list[dict]:
     return sorted(cuts, key=lambda item: item["time"])
 
 
+def collect_picture_holds(job: dict, audit: list[dict], fps: float = 25.0) -> list[dict]:
+    """Return visible still-frame holds using the same cursor as the renderer."""
+    narration_starts = {
+        item.get("id"): float(item["timelineStart"])
+        for item in job["timeline"]
+        if item.get("type") == "narration"
+    }
+    candidates: list[dict] = []
+    for block in audit:
+        block_id = block["block"]
+        cursor = narration_starts[block_id]
+        clips = block.get("clips", [])
+        for index, clip in enumerate(clips):
+            clip_duration = float(clip.get("clip_duration") or 0)
+            hold_seconds = float(clip.get("hold_after") or 0)
+            hold_frames = round(hold_seconds * fps)
+            freeze_start = cursor + clip_duration
+            if hold_frames > 3:
+                candidates.append({
+                    "block": block_id,
+                    "sceneId": clip.get("scene_id"),
+                    "clipIndex": index,
+                    "freezeStart": freeze_start,
+                    "freezeEnd": freeze_start + hold_seconds,
+                    "holdSeconds": hold_seconds,
+                    "holdFrames": hold_frames,
+                    "cutAfter": freeze_start + hold_seconds if index < len(clips) - 1 else None,
+                })
+            cursor = freeze_start + hold_seconds
+    return candidates
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-root", type=Path, required=True)
@@ -61,6 +93,7 @@ def main() -> None:
         type=Path,
         help="Optional isolated production cache containing recap-* directories.",
     )
+    parser.add_argument("--fps", type=float, default=25.0)
     args = parser.parse_args()
     font = ImageFont.truetype(r"C:\Windows\Fonts\msyh.ttc", 19)
     small = ImageFont.truetype(r"C:\Windows\Fonts\msyh.ttc", 16)
@@ -79,6 +112,10 @@ def main() -> None:
         job = json.loads((production / "job.json").read_text(encoding="utf-8-sig"))
         audit = json.loads((production / "broll-audit.json").read_text(encoding="utf-8-sig"))
         cuts = collect_cuts(job, audit)
+        picture_hold_candidates = collect_picture_holds(job, audit, args.fps)
+        freeze_then_cut_candidates = [
+            row for row in picture_hold_candidates if row.get("cutAfter") is not None
+        ]
         cap = cv2.VideoCapture(str(delivery))
         duration = float(job["totalDurationOutput"])
         rows = []
@@ -123,7 +160,13 @@ def main() -> None:
             "delivery": str(delivery),
             "cutCount": len(cuts),
             "flashCandidates": flash_candidates,
-            "status": "passed" if not flash_candidates else "review",
+            "pictureHoldCandidates": picture_hold_candidates,
+            "freezeThenCutCandidates": freeze_then_cut_candidates,
+            "status": (
+                "passed"
+                if not flash_candidates and not picture_hold_candidates
+                else "review"
+            ),
             "contactSheet": str(sheet),
             "cuts": cuts,
         }
@@ -131,7 +174,16 @@ def main() -> None:
             json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         all_results.append(result)
-        print(json.dumps({k: result[k] for k in ("recap", "cutCount", "flashCandidates", "status")}, ensure_ascii=False))
+        print(json.dumps({
+            k: result[k]
+            for k in (
+                "recap",
+                "cutCount",
+                "flashCandidates",
+                "pictureHoldCandidates",
+                "status",
+            )
+        }, ensure_ascii=False))
     (args.output_root / "encoded-cut-boundary-summary.json").write_text(
         json.dumps(all_results, ensure_ascii=False, indent=2), encoding="utf-8"
     )

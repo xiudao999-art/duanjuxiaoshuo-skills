@@ -19,13 +19,44 @@
 - complete dialogue turns with 0.3–0.5 second breathing room;
 - no narration over an unfinished source sentence;
 - no half-shot, one-frame flash, accidental freeze, black frame, or decode error;
-- semantic alignment passes with exact-match clip ratio at least 0.50,
-  exact-or-context duration ratio at least 0.90, average source clip duration at
-  least seven seconds, and zero contradiction, unbound beat, or sub-five-second
-  narration clips;
-- encoded cut-boundary audit reports zero flash candidates;
+- every semantic beat stores the approved spoken narration text and its real
+  TTS timing; event titles or summaries cannot stand in for narration text;
+- the beat map resolves every event ID against the audited ledger and matches
+  the locked story-plan hash, so visual repair cannot silently change the
+  family, profile, central question, causal spine, hook, narration/dialogue
+  text, event IDs or order, or payoff;
+- semantic alignment satisfies the selected Profile's exact-clip,
+  exact-duration, average-shot, and under-five-second thresholds from
+  [narrative-profiles.md](narrative-profiles.md); globally require
+  exact-or-context duration at least 0.90, neutral duration at most 0.10, and
+  zero contradiction or unbound beats;
+- `motion-coverage-audit.json` uses schema `motion-coverage-audit-v1`, reports
+  `status=passed`, zero motion-shortfall/timeline-mismatch/hold-budget blocks,
+  and `maximumClipHoldFrames<=3` before VSR/STTN starts;
+- `hold_after` defaults to zero; no narration clip or entire narration block
+  may use more than three hold frames, and cloned-frame/tpad compensation is
+  forbidden;
+- exactly one reviewed 540×960 preview and start/middle/end evidence for every
+  semantic beat pass before VSR/STTN starts;
+- encoded cut-boundary timestamps include `clip_duration + hold_after`, and the
+  audit reports zero flash, picture-hold, and freeze-then-cut candidates;
 - final sentence completes; tail is at least 0.45 seconds and normally no more
   than 6 seconds;
+
+The final program tail is not a narration-picture freeze allowance. Keep
+normal live picture or a deliberate end treatment throughout that tail.
+
+Legacy compatibility is valid only for an exact SHA-256 artifact-set match in
+[compatibility-baselines.json](compatibility-baselines.json). It may accept the
+approved sample's legacy audit schema, but it cannot relax its Profile
+thresholds and never applies to a new or changed render.
+
+Visual repair gets one targeted safe-range pass inside already-bound
+events/scenes and one deterministic recheck. If that second preflight fails,
+mark the item `visual-coverage-pending` and continue the batch. Do not loop
+through repeated model calls, VSR passes, previews, or full renders. Rerender
+and rerun VSR only for clips whose locked EDL range changed; the story-plan hash
+must remain unchanged.
 
 ## Captions
 
@@ -65,5 +96,6 @@
 - each filename includes family and episode range;
 - candidate rejection and repair history is preserved;
 - pairwise core-event overlap below 70% unless explicitly approved;
-- all planned deliverables exist and all per-video QC files pass.
+- all planned deliverables exist or have an explicit non-delivery status such
+  as `visual-coverage-pending`, and all delivered per-video QC files pass.
 - each delivery includes MP4, matching SRT, per-video QC JSON, caption contract audit, hard-subtitle Pilot audit, and caption-reset contact-sheet evidence.

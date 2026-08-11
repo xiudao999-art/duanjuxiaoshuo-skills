@@ -13,5 +13,8 @@
 11. If a highlight phrase spans several cues, split it into one highlight event per cue. Never let a phrase persist as a second line beneath the next cue.
 12. Do not move characters between cues without moving their word timing boundaries. Repair text and timing as one atomic change.
 13. Invalidate cached caption layers when script text, word timings, protected terms, font, font size, tracking, maximum width, baseline, or cue IDs change.
+14. Use `short-drama-vsr-tight-rail-1080x1920`: 64 px one-line captions,
+    baseline 1385, on the 90 px blur-only rail at y=1318. Do not inherit the
+    88 px talking-head style or rail geometry from a mask map.
 
 Required metrics: `scriptRoundtrip=true`, `maximumCharacters<=9`, `wordSplitCount=0`, `protectedTermSplitCount=0`, `overlapCount=0`, `multilineCueCount=0`, `orphanCount=0`. Inspect encoded reset contact sheets across the start, middle, and end of every video. Include both real pauses and immediate cue replacements. At a real pause the middle frame must be blank; at a gapless replacement it may show the new cue but never the previous and new cues together.

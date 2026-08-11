@@ -46,11 +46,14 @@ Bind visuals after the script is approved but before TTS/render:
 - Use 1–3 continuous clips per narration block, normally 5–19 seconds each.
   Require an average source-clip duration of at least seven seconds and normally
   zero clips below five seconds.
-- If reviewed clips exceed synthesized narration duration, first add a concise,
-  causally useful line or choose a naturally shorter reviewed range. Never speed
-  source drama, truncate an action, or silently replace the shot with a lexical
-  match. Require selected picture duration not to exceed the narration block by
-  more than one frame; keep a deliberate last-frame hold at six seconds or less.
+- If reviewed clips exceed synthesized narration duration, choose a naturally
+  shorter safe range inside the same locked event. Never rewrite locked
+  narration, speed source drama, truncate an action, or silently replace the
+  shot with a lexical match. Require moving picture to cover the narration
+  block within three frames and assembled picture duration to differ by no more
+  than one frame. `hold_after` defaults to zero and may total at most three
+  frames per narration block only for rounding; never clone the last frame to
+  fill missing footage.
 - When two separately cleaned ranges share the same source boundary, merge them
   when they form one continuous shot. Otherwise leave one encoded frame between
   ranges so the boundary frame is not duplicated.

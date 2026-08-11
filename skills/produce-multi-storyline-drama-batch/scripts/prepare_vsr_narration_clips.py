@@ -15,6 +15,61 @@ WIDTH = 1080
 HEIGHT = 1920
 FPS = 25
 
+SHORT_DRAMA_SUBTITLE_STYLE = "short-drama-vsr-tight-rail-1080x1920"
+SHORT_DRAMA_RAIL = {
+    "enabled": True,
+    "mode": "fullwidth-tight-gaussian-blur-only",
+    "x": 0,
+    "y": 1318,
+    "width": 1080,
+    "height": 90,
+    "blurSigma": 28,
+    "blurSteps": 3,
+    "darkOpacity": 0.0,
+    "captionBaseline": 1385,
+    "targetVerticalPaddingPx": [6, 12],
+}
+SHORT_DRAMA_CAPTION_STYLE = {
+    "normalSize": 64,
+    "accentSize": 64,
+    "highlightSize": 64,
+    "maxWidth": 920,
+    "weight": 850,
+    "edgeWidth": 1.15,
+    "shadowStroke": 1.5,
+}
+
+
+def resolve_short_drama_rail(config: dict) -> dict:
+    """Resolve the visible rail independently from the STTN mask map."""
+    cover = ((config.get("output") or {}).get("narrationSourceSubtitleCover") or {})
+    configured = cover.get("rail")
+    rail = dict(SHORT_DRAMA_RAIL)
+    if isinstance(configured, dict):
+        rail.update(configured)
+    expected = {
+        "enabled": True, "x": 0, "y": 1318, "width": 1080, "height": 90,
+        "blurSigma": 28.0, "darkOpacity": 0.0, "captionBaseline": 1385,
+    }
+    actual = {
+        "enabled": bool(rail.get("enabled", True)),
+        "x": int(rail.get("x", 0)), "y": int(rail.get("y", 1318)),
+        "width": int(rail.get("width", 1080)), "height": int(rail.get("height", 90)),
+        "blurSigma": float(rail.get("blurSigma", 28.0)),
+        "darkOpacity": float(rail.get("darkOpacity", 0.0)),
+        "captionBaseline": int(rail.get("captionBaseline", 1385)),
+    }
+    if actual != expected:
+        raise RuntimeError(
+            "short-drama subtitle rail differs from the locked global profile; "
+            f"expected={expected} actual={actual}"
+        )
+    baseline = int(config.get("caption_baseline_px", 1385))
+    if baseline != 1385:
+        raise RuntimeError(f"short-drama caption baseline must be 1385, got {baseline}")
+    rail.update(actual)
+    return rail
+
 
 def load(path: Path):
     return json.loads(path.read_text(encoding="utf-8-sig"))
@@ -135,9 +190,9 @@ def clip_key(episode: int, start: float, end: float, masks: list[list[int]]) -> 
 
 def rail_filter(rail: dict) -> str:
     x = int(rail.get("x", 0))
-    y = int(rail.get("y", 1285))
+    y = int(rail.get("y", 1318))
     width = int(rail.get("width", 1080))
-    height = int(rail.get("height", 120))
+    height = int(rail.get("height", 90))
     blur_sigma = min(60.0, max(2.0, float(rail.get("blurSigma", 28.0))))
     opacity = min(0.85, max(0.0, float(rail.get("darkOpacity", 0.0))))
     if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > WIDTH or y + height > HEIGHT:
@@ -217,6 +272,7 @@ def main() -> None:
 
     bindings = []
     unique = {}
+    rail = resolve_short_drama_rail(config)
     for job in config["jobs"]:
         manual = job.get("manual_broll") or {}
         for block_id, specs in manual.items():
@@ -253,7 +309,6 @@ def main() -> None:
         "groupCount": len(groups),
         "groups": [],
     }
-    rail = mask_map.get("rail") or {"enabled": True}
     if args.dry_run:
         for group_index, clips in enumerate(groups.values(), 1):
             plan["groups"].append({
@@ -391,15 +446,22 @@ def main() -> None:
         spec["precleaned_path"] = str(cleaned_paths[key])
         spec["hard_subtitle_policy"] = "inpainted-sttn-auto+fullwidth-gaussian-blur-rail"
         spec["preserve_original_composition"] = True
-    rail = mask_map.get("rail") or {}
-    config["caption_baseline_px"] = int(rail.get("captionBaseline", 1385))
-    config.setdefault("output", {})["narrationSourceSubtitleCover"] = {
+    config["subtitle_style_profile"] = SHORT_DRAMA_SUBTITLE_STYLE
+    config["caption_baseline_px"] = int(rail["captionBaseline"])
+    caption_style = dict(config.get("caption_style") or {})
+    caption_style.update(SHORT_DRAMA_CAPTION_STYLE)
+    config["caption_style"] = caption_style
+    output = config.setdefault("output", {})
+    cover = dict(output.get("narrationSourceSubtitleCover") or {})
+    cover.update({
         "enabled": True,
         "mode": "vsr-sttn-precleaned",
+        "styleProfile": SHORT_DRAMA_SUBTITLE_STYLE,
         "maskMap": str(args.mask_map),
         "plan": str(work_root / "vsr-plan.json"),
         "rail": rail,
-    }
+    })
+    output["narrationSourceSubtitleCover"] = cover
     dump(work_root / "vsr-plan.json", plan)
     dump(args.output_config, config)
     print(json.dumps({"outputConfig": str(args.output_config), "clips": len(unique), "groups": len(groups)}, ensure_ascii=False))

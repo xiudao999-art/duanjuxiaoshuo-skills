@@ -18,6 +18,7 @@ Turn one complete drama into every qualified, meaningfully different recap windo
 5. Use `video-use` or an equivalent word-timed ASR pipeline for source dialogue boundaries.
 6. Read [hard-subtitle-treatment.md](references/hard-subtitle-treatment.md) whenever any source master contains burned subtitles.
 7. Read [narrative-profiles.md](references/narrative-profiles.md) before selecting a story structure. Read [sample-style-story-editing.md](references/sample-style-story-editing.md) only when the selected profile is `P01_dual_time_conflict`.
+8. Read [semantic-visual-alignment.md](references/semantic-visual-alignment.md) before binding narration footage or approving a preview.
 
 ## Operating modes
 
@@ -44,6 +45,12 @@ Create stable records with:
 `event_id`, `scene_id`, `episode`, `source_start`, `source_end`, `safe_in`, `safe_out`, `characters`, `location`, `action`, `conflict`, `reveal`, `relationship`, `emotion`, `dialogue`, `visual_tags`, `payoff`, `shot_boundary_confidence`.
 
 The ledger is the only normal source for narration visuals. Never search footage at render time by matching narration words.
+
+Before using the ledger, audit canonical character identities, aliases, age/time
+states, actions, and episode/source ranges against representative frames and
+the word-timed transcript. Correct a wrong ledger record before binding any
+footage; a valid timecode attached to the wrong character is still invalid
+evidence.
 
 ### 3. Generate multiple narrative families
 
@@ -89,19 +96,75 @@ test. For `P01_dual_time_conflict`, also read
 
 ### 6. Bind long continuous visuals at planning time
 
-Read [event-bound-editing.md](references/event-bound-editing.md).
+Read [semantic-visual-alignment.md](references/semantic-visual-alignment.md) and
+[event-bound-editing.md](references/event-bound-editing.md). Treat visual
+alignment as a downstream evidence operation: do not change the selected
+family, narrative profile, central question, causal spine, or payoff merely to
+improve alignment metrics.
+
+- Synthesize the locked narration and obtain real word timings before final
+  footage placement. Split adjacent narration into semantic beats of one to
+  three sentences that describe the same event; do not force one cut per
+  sentence.
+- Create `planning/narration-beat-maps/<job-id>.json`. Every beat must contain
+  the approved narration text, real TTS start/end, event IDs, required
+  characters/action/location/time state, and its reviewed clip bindings. Event
+  titles or summaries are not substitutes for the spoken narration text.
+- Lock the original story plan by SHA-256 in the beat map. From this point,
+  visual repair must not change the family, profile, central question, causal
+  spine, hook, narration/dialogue text, event IDs or order, or payoff. Repair
+  only source in/out points inside already-bound events/scenes, safe cut
+  boundaries, subtitle treatment, or affected renders. Unsupported wording is
+  a story-stage failure to resolve before this lock, never a reason to rewrite
+  a locked job during visual QC.
+- Classify reviewed coverage as `exact`, `context`, `neutral`, or
+  `contradiction`. Apply the selected Profile's exact-clip, exact-duration,
+  average-shot, and under-five-second thresholds. Globally require
+  exact-or-context duration at least 90% and zero contradiction or unbound
+  factual beats.
+- Use the selected Profile's picture-duration floor. Let one continuous clip
+  serve adjacent beats in the same continuity group; do not cut merely because
+  a new sentence begins. Keep no more than four narration-picture cuts in any
+  rolling 30-second window unless the Profile explicitly overrides it.
+- Before VSR/STTN, run the deterministic frame-budget preflight below against
+  the final mastered narration timings and the materialized B-roll plan. This
+  uses no model call and must finish before any expensive subtitle removal:
+
+  `python scripts/validate_motion_coverage.py --job <production/job-id/job.json> --broll <production/job-id/broll-audit.json> --output <production/job-id/qc/motion-coverage-audit.json>`
+
+  `hold_after` defaults to zero. At 25 fps, allow at most three total hold
+  frames in one narration block only for rounding; never use cloned final
+  frames or `tpad=stop_mode=clone` to compensate for missing drama footage.
+  On failure, make one targeted repair by extending or selecting a natural
+  range inside the same already-bound event/scene. Recheck once. If it still
+  fails, mark that item `visual-coverage-pending` and continue the batch; do
+  not rewrite the story, add events, or enter an open-ended render/QC loop.
+- After the motion preflight passes, render exactly one 540×960 alignment
+  preview before VSR/STTN or final rendering. Inspect the start, middle, and
+  end of every beat and store the evidence frames. Route only uncertain
+  identity/action matches to additional visual review.
+- For jobs produced by the bundled two-minute recap pipeline, run
+  `scripts/build_semantic_alignment_map.py` after the preview review to create
+  the locked per-job story snapshot and beat map from `job.json`,
+  `broll-audit.json`, and the reviewed beat evidence. Do not hand-copy event
+  titles into narration fields.
+- Run `scripts/validate_semantic_alignment.py <beat-map> --event-ledger
+  <event-ledger> --story-plan <locked-story-plan> --output
+  <production/job-id/qc/semantic-alignment-audit.json>`. Do not proceed to VSR
+  unless it exits successfully.
 
 - Bind each narration block to 1–3 reviewed continuous source clips, normally 5–19 seconds each. A block longer than 27 seconds may use four long clips when the average shot still exceeds roughly seven seconds. Prefer one correct long scene when additional cuts would force mismatched footage.
 - Prefer one slightly imperfect but continuous scene over several short, semantically wrong shots.
 - Do not cut half a shot, cross a camera motion discontinuity, or create one-frame flashes.
 - Source drama shots and dialogue remain 1.0x. Only synthesized narration may use the configured speech speed.
 - Within one video, do not reuse the same shot/range or repeat narration.
-- Measure synthesized narration before rendering. If reviewed long scenes exceed
-  the block, add only a causally useful sentence or select a naturally shorter
-  reviewed range; never accelerate source footage, trim through an action, or
-  fall back to a word-similarity replacement. Picture duration may exceed the
-  narration block by at most one frame, and a deliberate final-frame hold must
-  remain at or below six seconds.
+- Measure synthesized narration before rendering. Select a naturally shorter
+  safe range inside the same reviewed event when picture exceeds the block;
+  never change locked narration, accelerate source footage, trim through an
+  action, or fall back to a word-similarity replacement. Moving-picture
+  duration must cover the narration block within three frames, assembled
+  picture may differ by at most one frame, and total rounding hold per block
+  must remain at or below three frames.
 - Merge adjacent ranges that are truly one scene. When separately cleaned ranges
   merely touch, avoid duplicating the shared encoded frame by leaving a one-frame
   boundary or by rebuilding them as one cleaned range.
@@ -121,9 +184,11 @@ Read [caption-contract.md](references/caption-contract.md).
 - Punctuation and semantic pauses start a new cue; a pause must clear the previous cue.
 - Keep protected names and phrases intact; never split a word across cues.
 - One line only, normally at most 9 visible characters, zero cue overlap, no inherited previous sentence, no punctuation in the burned narration caption unless explicitly requested.
-- Position narration captions on the reviewed residual rail. Do not change the
-  selected shot or raise/lower the caption merely to dodge source subtitles;
-  repair the locked shot first, then use the rail baseline from the mask map.
+- Select the global `short-drama-vsr-tight-rail-1080x1920` subtitle profile for
+  narration captions. Do not change the selected shot or raise/lower the
+  caption merely to dodge source subtitles. The STTN mask map describes only
+  source pixels to repair and must never override caption size, baseline, or
+  visible-rail geometry.
 - Rebuild designed pop-up captions from the new cue IDs after any timing repair.
 - If one emphasis phrase spans multiple cues, render one one-line emphasis event per cue. The preceding event must disappear before the next cue appears; never keep the whole phrase as a sticky second line.
 - Select each designed emphasis phrase from a different final caption cue.
@@ -155,6 +220,9 @@ Read [hard-subtitle-treatment.md](references/hard-subtitle-treatment.md). Treat 
   safeguard, not a substitute for STTN. Do not use a two-line-height or
   lower-third-size rail for one-line text. Fit the visible rail tightly around
   the encoded glyphs and outline; retain only 6–12 px top/bottom safety padding.
+- At 1080x1920, lock the short-drama rail to `y=1318`, `height=90`, caption
+  baseline `1385`, caption size `64`, and `darkOpacity=0`. Reject legacy 120 px
+  or 180 px rails. Do not derive these visual parameters from a mask map.
 - Apply removal only to narration B-roll by default. Preserve the original full frame and original hard subtitles for real dialogue, and do not overlay narration captions there.
 - Build a clean master first. Burn source notice, approved-script captions, and per-cue emphasis only after source-subtitle treatment is locked.
 - Generate an encoded Pilot and inspect the first, middle, and last frame of every narration shot. Require zero readable source subtitles, zero source/generated double-subtitle frames, zero vertical stretch, and no cropped face, action, or key prop.
@@ -176,11 +244,24 @@ Read [final-delivery-gates.md](references/final-delivery-gates.md). Run checks o
 - inspect the encoded first, middle, and last frame of every narration shot for source hard-subtitle leakage and framing damage;
 - batch-level story and footage overlap report.
 - run encoded cut-boundary inspection on every block and picture transition;
-  require `flashCandidates=[]` rather than relying on timeline math alone;
+  calculate cuts from `clip_duration + hold_after`, and require
+  `flashCandidates=[]`, `pictureHoldCandidates=[]`, and
+  `freezeThenCutCandidates=[]` rather than relying on nominal timeline math;
+- require `production/<job-id>/qc/motion-coverage-audit.json` with
+  `status=passed`, zero motion-shortfall/timeline-mismatch/hold-budget blocks,
+  and `maximumClipHoldFrames<=3` before final delivery validation;
+- rerun `scripts/validate_semantic_alignment.py` against the final locked EDL
+  and require `status=passed`, `scriptRoundtrip=true`,
+  `storyPlanHashMatches=true`, `eventLedgerResolved=true`, the selected
+  Profile's picture thresholds, `exactOrContextDurationRatio>=0.90`,
+  `contradictionCount=0`, and `unboundBeatCount=0`;
 - run `scripts/qc_long_scene_cut_boundaries.py --output-root <batch-root>
   [--production-root <isolated-cache>]` for the encoded cut audit;
 - run global hard gates, then only the selected profile's regression checks from
   [narrative-profiles.md](references/narrative-profiles.md);
+- allow legacy compatibility only when the complete approved artifact set
+  matches [compatibility-baselines.json](references/compatibility-baselines.json)
+  by SHA-256; never apply that path to a new or changed render;
 - for `P01_dual_time_conflict`, additionally run the validated sample checks in
   [sample-style-story-editing.md](references/sample-style-story-editing.md).
 
@@ -221,8 +302,9 @@ Place all work under `<source>/edit/多故事线全量剪辑版/`:
 
 - `corpus/`: transcripts and episode corpus;
 - `planning/`: event ledger, candidates, scores, selection rationale, event-bound EDLs;
+- `planning/narration-beat-maps/`: approved narration-to-event-to-clip maps with locked story-plan hashes;
 - `production/`: narration, captions, intermediate assets, and per-video manifests;
-- `qc/`: machine reports, contact sheets, and repair ledger;
+- `qc/`: machine reports, motion-coverage and semantic-alignment audits, the single low-resolution preview evidence set, contact sheets, and repair ledger;
 - `deliveries/`: final MP4, SRT, and per-video QC JSON;
 - `delivery-index.md` and `delivery-index.json`.
 - `qc/narrative-profile-regression-summary.json` and encoded cut/caption-reset contact

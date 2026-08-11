@@ -35,16 +35,6 @@ Create one JSON file per source series:
   "defaultMasks": [[1275, 1415, 0, 1079]],
   "episodes": {
     "3": [[1260, 1425, 0, 1079]]
-  },
-  "rail": {
-    "enabled": true,
-    "x": 0,
-    "y": 1285,
-    "width": 1080,
-    "height": 120,
-    "blurSigma": 28,
-    "darkOpacity": 0.0,
-    "captionBaseline": 1385
   }
 }
 ```
@@ -57,6 +47,10 @@ two-line-height mask when the source is one line. Keep the residual rail no
 taller than the reviewed one-line safe area. If one series changes subtitle
 placement or truly uses two lines, create additional episode/layout groups
 instead of widening the vertical mask.
+
+The mask map never owns the visible caption rail. Select the global
+`short-drama-vsr-tight-rail-1080x1920` profile, whose locked 1080x1920 rail is
+`x=0, y=1318, width=1080, height=90`, with caption baseline `1385`.
 
 ## Run
 
@@ -72,7 +66,8 @@ python .codex/skills/produce-multi-storyline-drama-batch/scripts/prepare_vsr_nar
 The script deduplicates final narration ranges, batches identical masks, calls
 STTN, splits exact frame ranges, adds the residual rail, and writes
 `precleaned_path` into every manual narration visual. Render only the generated
-VSR-bound config.
+VSR-bound config. It must preserve the locked per-job rail and ignore any
+legacy `rail` object that remains in an older mask map.
 
 Use `--work-root` on a scratch volume with enough space for raw clips, the
 concatenated STTN batch, the repaired batch, and split cleaned clips. Do not

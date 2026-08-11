@@ -1,0 +1,17 @@
+{
+  "schema": "compatibility-baselines-v1",
+  "policy": "Exact approved artifact sets only. Compatibility never weakens gates for a new or changed render.",
+  "baselines": [
+    {
+      "id": "P01_parking_property_case_style_v1",
+      "profile": "P01_dual_time_conflict",
+      "videoSha256": "ffcf7e9f711303f1c9843fb8319ba4002817abad0efd1856a80d087ed5f456a8",
+      "jobSha256": "89d6e3bead714713c267a1ec06316131bf72c93b8179dadb2bf5629b1a0d290e",
+      "brollAuditSha256": "f1238037c30e81f14c5dffc5b337b56fd5fa87abfc967d9cbffe857ff09ee9f7",
+      "semanticAuditSha256": "04d11e7422d4c574d440ee8c727e526571ef3df090973ce75ea0ffbda8a70149",
+      "cutAuditSha256": "32db539c96fe5aaac52d0d3b7ebbad23d5f0c44868cfdce27a0c4ab7acf56241",
+      "legacySemanticSchema": "semantic-long-scene-alignment-v1",
+      "note": "Approved original P01 case-style sample; not a production exemption."
+    }
+  ]
+}

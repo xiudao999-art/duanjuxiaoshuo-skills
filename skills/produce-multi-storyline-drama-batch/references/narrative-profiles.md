@@ -27,10 +27,34 @@ Apply these rules to every profile:
 | `P04_reveal_investigation` | F07, F08, F12 | anomaly/clue → false answer → verification → reveal and consequence | 5–10 s | 2–4 turns, 15–45 s | exact ratio ≥0.45, average ≥6 s |
 | `P05_contrast_anthology` | F11, F13 | shared theme → escalating contrasts → synthesis/payoff | 3–8 s | 0–4 turns, 0–40 s | exact ratio ≥0.25, average ≥4.5 s |
 
+The validator owns these Profile-specific picture thresholds:
+
+| Profile | Exact clips | Exact duration | Average shot | Under-five-second clips |
+|---|---:|---:|---:|---|
+| `P01_dual_time_conflict` | 0.50 | 0.55 | 7.0 s | forbidden |
+| `P02_agency_counterattack` | 0.40 | 0.45 | 6.0 s | allowed when causally justified |
+| `P03_relationship_arc` | 0.35 | 0.40 | 6.0 s | allowed when causally justified |
+| `P04_reveal_investigation` | 0.45 | 0.50 | 6.0 s | allowed when causally justified |
+| `P05_contrast_anthology` | 0.25 | 0.30 | 4.5 s | allowed when causally justified |
+
+Never reintroduce P01's `0.50 / 0.55 / 7.0 s / zero-under-five` values as
+global semantic gates. Exact-or-context duration at least 0.90, neutral
+duration at most 0.10, and zero contradiction or unbound beats remain global.
+
 These are starting contracts, not quotas. Override a numeric default only in an
 approved per-job `profile_overrides` record with an evidence-based reason. Never
 weaken zero-contradiction, zero-unbound-fact, complete-dialogue, subtitle, or
 encoded-frame gates.
+
+## Approved legacy compatibility
+
+New renders must satisfy the current audit schemas and their selected Profile.
+An approved historic sample may use a legacy audit only when the video,
+`job.json`, B-roll audit, semantic audit, and encoded cut audit all match one
+entry in [compatibility-baselines.json](compatibility-baselines.json) by
+SHA-256. Changing any artifact disables compatibility. A matching baseline
+never relaxes the selected Profile's story or picture thresholds and must not
+be copied into a new production job.
 
 ## Selection
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -81,12 +82,50 @@ def load_if_present(path: Path, default):
 
 
 PROFILE_RULES = {
-    "P01_dual_time_conflict": {"hook": (7, 12), "dialogues": (3, 4), "dialogue_seconds": (28, 48), "exact": 0.50, "average_shot": 7.0, "no_under_five": True},
-    "P02_agency_counterattack": {"hook": (5, 10), "dialogues": (2, 4), "dialogue_seconds": (18, 45), "exact": 0.40, "average_shot": 6.0},
-    "P03_relationship_arc": {"hook": (5, 12), "dialogues": (2, 5), "dialogue_seconds": (20, 55), "exact": 0.35, "average_shot": 6.0},
-    "P04_reveal_investigation": {"hook": (5, 10), "dialogues": (2, 4), "dialogue_seconds": (15, 45), "exact": 0.45, "average_shot": 6.0},
-    "P05_contrast_anthology": {"hook": (3, 8), "dialogues": (0, 4), "dialogue_seconds": (0, 40), "exact": 0.25, "average_shot": 4.5},
+    "P01_dual_time_conflict": {"hook": (7, 12), "dialogues": (3, 4), "dialogue_seconds": (28, 48), "exact": 0.50, "exact_duration": 0.55, "average_shot": 7.0, "no_under_five": True},
+    "P02_agency_counterattack": {"hook": (5, 10), "dialogues": (2, 4), "dialogue_seconds": (18, 45), "exact": 0.40, "exact_duration": 0.45, "average_shot": 6.0, "no_under_five": False},
+    "P03_relationship_arc": {"hook": (5, 12), "dialogues": (2, 5), "dialogue_seconds": (20, 55), "exact": 0.35, "exact_duration": 0.40, "average_shot": 6.0, "no_under_five": False},
+    "P04_reveal_investigation": {"hook": (5, 10), "dialogues": (2, 4), "dialogue_seconds": (15, 45), "exact": 0.45, "exact_duration": 0.50, "average_shot": 6.0, "no_under_five": False},
+    "P05_contrast_anthology": {"hook": (3, 8), "dialogues": (0, 4), "dialogue_seconds": (0, 40), "exact": 0.25, "exact_duration": 0.30, "average_shot": 4.5, "no_under_five": False},
 }
+
+
+COMPATIBILITY_BASELINES_PATH = Path(__file__).resolve().parents[1] / "references" / "compatibility-baselines.json"
+
+
+def sha256_file(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def match_compatibility_baseline(profile: str | None, video: Path | None, production: Path) -> dict | None:
+    """Return an approved legacy baseline only when every artifact hash matches."""
+    if profile not in PROFILE_RULES or video is None or not COMPATIBILITY_BASELINES_PATH.is_file():
+        return None
+    manifest = load(COMPATIBILITY_BASELINES_PATH)
+    if manifest.get("schema") != "compatibility-baselines-v1":
+        return None
+    paths = {
+        "videoSha256": video,
+        "jobSha256": production / "job.json",
+        "brollAuditSha256": production / "broll-audit.json",
+        "semanticAuditSha256": production / "qc" / "semantic-alignment-audit.json",
+        "cutAuditSha256": production / "qc" / "encoded-cut-boundary-audit.json",
+    }
+    actual = {key: sha256_file(path) for key, path in paths.items()}
+    if any(value is None for value in actual.values()):
+        return None
+    for baseline in manifest.get("baselines", []):
+        if baseline.get("profile") != profile:
+            continue
+        if all(str(baseline.get(key) or "").lower() == value for key, value in actual.items()):
+            return baseline
+    return None
 
 
 def resolve_profile(job: dict) -> str | None:
@@ -123,6 +162,7 @@ def profile_checks(profile: str | None, hooks: list[dict], dialogues: list[dict]
         "profileDialogueTurns": dialogue_min <= len(dialogues) <= dialogue_max,
         "profileDialogueDuration": seconds_min <= dialogue_seconds <= seconds_max,
         "profileExactMatchRatio": float(semantic_metrics.get("exactMatchClipRatio") or 0) >= float(rule["exact"]),
+        "profileExactMatchDurationRatio": float(semantic_metrics.get("exactMatchDurationRatio") or 0) >= float(rule["exact_duration"]),
         "profileAverageShotDuration": float(semantic_metrics.get("averageSourceClipDuration") or 0) >= float(rule["average_shot"]),
     })
     if rule.get("no_under_five"):
@@ -131,6 +171,76 @@ def profile_checks(profile: str | None, hooks: list[dict], dialogues: list[dict]
         checks["profileOralSentenceAverage14To24"] = bool(sentence_lengths) and 14 <= sum(sentence_lengths) / len(sentence_lengths) <= 24
         checks["profileNormalSentenceMaximum32"] = bool(sentence_lengths) and max(sentence_lengths) <= 32
     return checks
+
+
+def semantic_alignment_checks(audit: dict, compatibility_baseline: dict | None = None) -> dict:
+    metrics = audit.get("metrics", {}) if isinstance(audit, dict) else {}
+    if compatibility_baseline:
+        return {
+            "semanticApprovedLegacyCompatibilityBaseline": audit.get("schema") == compatibility_baseline.get("legacySemanticSchema"),
+            "semanticAlignmentPassed": audit.get("status") == "passed",
+            "semanticExactOrContextDuration": float(metrics.get("exactOrContextDurationRatio") or 0) >= 0.90,
+            "semanticNeutralDuration": float(metrics.get("neutralDurationRatio") or 0) <= 0.10,
+            "semanticNoContradictoryOrUnbound": (
+                int(metrics.get("contradictionCount") or 0) == 0
+                and int(metrics.get("unboundBeatCount") or 0) == 0
+            ),
+            "semanticLegacyArtifactSetHashMatched": True,
+        }
+    return {
+        "semanticAlignmentAuditV1": audit.get("schema") == "semantic-alignment-audit-v1",
+        "semanticAlignmentPassed": audit.get("status") == "passed",
+        "semanticScriptRoundtrip": metrics.get("scriptRoundtrip") is True,
+        "semanticStoryPlanHashMatches": metrics.get("storyPlanHashMatches") is True,
+        "semanticEventLedgerResolved": metrics.get("eventLedgerResolved") is True,
+        "semanticExactOrContextDuration": float(metrics.get("exactOrContextDurationRatio") or 0) >= 0.90,
+        "semanticNeutralDuration": float(metrics.get("neutralDurationRatio") or 0) <= 0.10,
+        "semanticVisualCoverage": float(metrics.get("visualCoverageRatio") or 0) >= 0.999,
+        "semanticPictureHoldAtMostThreeFrames": (
+            "maximumPictureHoldSeconds" in metrics
+            and int(metrics.get("pictureHoldOverThreeFramesCount") or 0) == 0
+            and float(metrics.get("maximumPictureHoldSeconds") or 0) <= 0.12
+        ),
+        "semanticMasteredTimingTrimAtMostQuarterSecond": float(metrics.get("maximumMasteredTimingTrim") or 0) <= 0.25,
+        "semanticCutsPerRolling30Seconds": int(metrics.get("maximumCutsPerRolling30Seconds") or 0) <= 4,
+        "semanticNoContradictoryOrUnbound": (
+            int(metrics.get("contradictionCount") or 0) == 0
+            and int(metrics.get("unboundBeatCount") or 0) == 0
+        ),
+        "semanticEvidenceFramesPresent": int(metrics.get("missingEvidenceFrameSetCount") or 0) == 0,
+        "semanticLowResolutionPreviewPassed": metrics.get("lowResolutionPreviewPassed") is True,
+    }
+
+
+def motion_coverage_checks(audit: dict, compatibility_baseline: dict | None = None) -> dict:
+    if compatibility_baseline:
+        return {"motionCoverageApprovedLegacyCompatibilityBaseline": True}
+    metrics = audit.get("metrics", {}) if isinstance(audit, dict) else {}
+    policy = audit.get("repairPolicy", {}) if isinstance(audit, dict) else {}
+    return {
+        "motionCoverageAuditV1": audit.get("schema") == "motion-coverage-audit-v1",
+        "motionCoveragePassed": audit.get("status") == "passed",
+        "motionCoverageNoShortfall": int(metrics.get("blocksWithMotionShortfallCount") or 0) == 0,
+        "motionCoverageTimelineMatches": int(metrics.get("blocksWithTimelineMismatchCount") or 0) == 0,
+        "motionCoverageHoldBudget": (
+            int(metrics.get("blocksOverHoldBudgetCount") or 0) == 0
+            and int(metrics.get("maximumClipHoldFrames") or 0) <= 3
+        ),
+        "motionCoverageStoryPlanImmutable": policy.get("storyPlanMutable") is False,
+    }
+
+
+def encoded_cut_boundary_passed(audit: dict, compatibility_baseline: dict | None = None) -> bool:
+    if compatibility_baseline:
+        return audit.get("status") == "passed" and not audit.get("flashCandidates")
+    return (
+        audit.get("status") == "passed"
+        and "pictureHoldCandidates" in audit
+        and "freezeThenCutCandidates" in audit
+        and not audit.get("flashCandidates")
+        and not audit.get("pictureHoldCandidates")
+        and not audit.get("freezeThenCutCandidates")
+    )
 
 
 def main() -> None:
@@ -164,8 +274,9 @@ def main() -> None:
             dialogues = [row for row in timeline if row.get("type") == "dialogue"]
             narration_lengths = narration_sentence_lengths(timeline)
             dialogue_seconds = sum(float(row.get("duration") or 0) for row in dialogues)
-            semantic = qc.get("semanticAlignment", {})
-            semantic_metrics = semantic.get("metrics", {})
+            semantic_audit = load_if_present(production / "qc" / "semantic-alignment-audit.json", {})
+            motion_audit = load_if_present(production / "qc" / "motion-coverage-audit.json", {})
+            semantic_metrics = semantic_audit.get("metrics", {})
             cut_audit = cut_by_id.get(job_id, {})
             reset_audit = load_if_present(production / "qc" / "caption-reset-render-audit.json", {})
             pilot_review = load_if_present(production / "qc" / "pilot-hard-subtitle-review.json", {})
@@ -173,6 +284,9 @@ def main() -> None:
             final_tail = float(narration_rows[-1].get("tailPad") or 0) if narration_rows else 0.0
             final_text = str(narration_rows[-1].get("text", "")) if narration_rows else ""
             profile = resolve_profile(job)
+            compatibility_baseline = match_compatibility_baseline(
+                profile, videos[0] if len(videos) == 1 else None, production
+            )
             checks = {
                 "oneDelivery": len(videos) == 1,
                 "oneSubtitle": len(srts) == 1,
@@ -194,20 +308,19 @@ def main() -> None:
                 "sourcePlaybackOne": abs(float(job.get("sourcePlaybackSpeed") or 0) - 1.0) < 0.001,
                 "completeFinalSentence": bool(re.search(r"[。！？!?]$", final_text.strip())),
                 "tail045To6": 0.45 <= final_tail <= 6.0,
-                "semanticAlignmentPassed": semantic.get("status") == "passed",
-                "semanticExactOrContextDuration": float(semantic_metrics.get("exactOrContextDurationRatio") or 0) >= 0.90,
-                "semanticNoContradictoryOrUnbound": (
-                    int(semantic_metrics.get("contradictionCount") or 0) == 0
-                    and int(semantic_metrics.get("unboundBeatCount") or 0) == 0
-                ),
-                "encodedCutBoundaryPassed": cut_audit.get("status") == "passed" and not cut_audit.get("flashCandidates"),
+                "encodedCutBoundaryPassed": encoded_cut_boundary_passed(cut_audit, compatibility_baseline),
                 "captionResetEvidencePresent": int(reset_audit.get("sampledTransitions") or 0) > 0 and Path(str(reset_audit.get("contactSheet") or "")).is_file(),
                 "hardSubtitleManualReviewPassed": pilot_review.get("status") == "passed",
             }
+            checks.update(semantic_alignment_checks(semantic_audit, compatibility_baseline))
+            checks.update(motion_coverage_checks(motion_audit, compatibility_baseline))
             checks.update(profile_checks(profile, hooks, dialogues, dialogue_seconds, narration_lengths, semantic_metrics))
             reports.append({
                 "id": job_id,
                 "narrativeProfile": profile,
+                "compatibilityMode": compatibility_baseline is not None,
+                "compatibilityBaselineId": compatibility_baseline.get("id") if compatibility_baseline else None,
+                "compatibilityHashMatched": compatibility_baseline is not None,
                 "video": str(videos[0]) if videos else None,
                 "checks": checks,
                 "passed": all(checks.values()),
@@ -234,9 +347,13 @@ def main() -> None:
         final_tail = float(narration_rows[-1].get("tailPad") or 0) if narration_rows else 0.0
         final_text = str(narration_rows[-1].get("text", "")) if narration_rows else ""
         profile = resolve_profile(job)
-        semantic = producer_qc.get("semanticAlignment") or job.get("semanticAlignment", {})
-        semantic_metrics = semantic.get("metrics", semantic)
+        semantic_audit = load_if_present(production / "qc" / "semantic-alignment-audit.json", {})
+        motion_audit = load_if_present(production / "qc" / "motion-coverage-audit.json", {})
+        semantic_metrics = semantic_audit.get("metrics", {})
         cut_audit = cut_by_id.get(job_id, {})
+        compatibility_baseline = match_compatibility_baseline(
+            profile, videos[0] if len(videos) == 1 else None, production
+        )
         broll = load_if_present(production / "broll-audit.json", [])
         ranges = []
         for block in broll if isinstance(broll, list) else []:
@@ -282,16 +399,21 @@ def main() -> None:
             "globalNormalSentenceMaximum36": bool(narration_lengths) and max(narration_lengths) <= 36,
             "sourcePlaybackOne": abs(float(job.get("sourcePlaybackSpeed") or 0) - 1.0) < 0.001,
             "tailNoMoreThan6": final_tail <= 6.0,
-            "semanticAlignmentPassed": semantic.get("status") == "passed" or bool(semantic_metrics),
-            "semanticExactOrContextDuration": float(semantic_metrics.get("exactOrContextDurationRatio") or 0) >= 0.90,
-            "semanticNoContradictoryOrUnbound": (
-                int(semantic_metrics.get("contradictionCount") or 0) == 0
-                and int(semantic_metrics.get("unboundBeatCount") or 0) == 0
-            ),
-            "encodedCutBoundaryPassed": cut_audit.get("status") == "passed" and not cut_audit.get("flashCandidates"),
+            "encodedCutBoundaryPassed": encoded_cut_boundary_passed(cut_audit, compatibility_baseline),
         }
+        checks.update(semantic_alignment_checks(semantic_audit, compatibility_baseline))
+        checks.update(motion_coverage_checks(motion_audit, compatibility_baseline))
         checks.update(profile_checks(profile, hooks, dialogues, dialogue_seconds, narration_lengths, semantic_metrics))
-        reports.append({"id": job_id, "narrativeProfile": profile, "video": str(videos[0]) if videos else None, "checks": checks, "passed": all(checks.values())})
+        reports.append({
+            "id": job_id,
+            "narrativeProfile": profile,
+            "compatibilityMode": compatibility_baseline is not None,
+            "compatibilityBaselineId": compatibility_baseline.get("id") if compatibility_baseline else None,
+            "compatibilityHashMatched": compatibility_baseline is not None,
+            "video": str(videos[0]) if videos else None,
+            "checks": checks,
+            "passed": all(checks.values()),
+        })
     summary = {"count": len(reports), "passedCount": sum(row["passed"] for row in reports), "failedIds": [row["id"] for row in reports if not row["passed"]], "entries": reports}
     output = args.root / "qc" / "batch-hard-gate-summary.json"
     output.parent.mkdir(parents=True, exist_ok=True)

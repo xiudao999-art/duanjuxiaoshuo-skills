@@ -16,11 +16,11 @@ Record for every narration shot:
 
 `sourceHasHardSubtitles`, `sourceSubtitleActive`, `sourceSubtitleText`, `subtitleEvidenceFrames`, `captionConflictChecked`, `hardSubtitlePolicy`, `crop/reframe geometry`, and `framingPlanSha256`.
 
-Classify masters as `clean`, `burned`, or `unknown`. Do not render `unknown` masters. When subtitles are active, allow only:
-
-- `reframed-outside-frame`: crop or reframe moves the complete subtitle band outside the output;
-- `inpainted`: a reviewed pixel repair removes the complete text without visible artifacts;
-- `explicit-waiver`: the user explicitly accepts a known visible remnant.
+Classify masters as `clean`, `burned`, or `unknown`. Do not render `unknown`
+masters. When subtitles are active, use `inpainted`: a reviewed pixel repair
+must remove the complete text without visible artifacts. An
+`explicit-waiver` is allowed only when the user explicitly accepts a known
+visible remnant. Crop/reframe is not an allowed subtitle-removal policy.
 
 `no-conflict` by itself is not a removal policy.
 
@@ -33,9 +33,11 @@ Classify masters as `clean`, `burned`, or `unknown`. Do not render `unknown` mas
 3. Process the locked narration shot with YaoFANGUK Video Subtitle Remover in `sttn-auto` mode.
 4. Group clips that share subtitle geometry and run STTN in batches; never inpaint the whole frame blindly.
 5. Inspect STTN output for readable remnants, smears, duplicated strokes, face/hand damage, and temporal flicker.
-6. Add a single-line local strong Gaussian/frosted blur rail over the minimum
-   repaired subtitle band and render the new narration caption on top. The
-   blur must remain obvious after encoding; do not darken or pixelate it.
+6. Add the locked `short-drama-vsr-tight-rail-1080x1920` Gaussian/frosted blur
+   rail and render the new narration caption on top. At 1080x1920 use y=1318,
+   height=90, baseline=1385, and 64 px captions. The blur must remain obvious
+   after encoding; do not darken or pixelate it. Do not read these values from
+   the STTN mask map.
 7. If STTN damages a critical subject, tighten or split the mask and rerun it. Do not crop the shot or switch to a less accurate visual as the normal fix.
 
 The approved implementation is documented in [vsr-sttn-hard-subtitle.md](vsr-sttn-hard-subtitle.md). Output remains 1080×1920 with SAR 1:1 and the original composition intact.
@@ -44,7 +46,7 @@ The approved implementation is documented in [vsr-sttn-hard-subtitle.md](vsr-stt
 
 1. Apply VSR/STTN with the locked per-material mask to narration shots only.
 2. Split the cleaned batches back to exact shot frame ranges.
-3. Add the residual mosaic/blur caption rail to narration shots only.
+3. Add the locked blur-only caption rail to narration shots only.
 4. Encode normalized shot blocks.
 5. Concatenate a clean master with no generated captions.
 6. Verify source-subtitle removal and rail geometry on the clean master.
