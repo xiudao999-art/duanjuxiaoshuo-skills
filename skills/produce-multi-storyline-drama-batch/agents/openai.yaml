@@ -1,0 +1,6 @@
+interface:
+  display_name: "多故事线短剧全量成片"
+  short_description: "样例式剧情旁白、多故事线长镜头剪辑与硬门槛质检"
+  default_prompt: "使用 $produce-multi-storyline-drama-batch 将整部短剧衍生为多故事线竖屏解说成片，采用事件绑定长镜头和样例式因果旁白，并完成字幕处理与交付质检。"
+policy:
+  allow_implicit_invocation: true
