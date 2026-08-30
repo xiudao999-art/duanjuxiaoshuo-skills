@@ -1,0 +1,16 @@
+{
+  "schema": "script-aligned-subtitle-style-v1",
+  "name": "short-drama-vsr-tight-rail-1080x1920",
+  "canvas": {"width": 1080, "height": 1920, "fps": 25, "sampleAspectRatio": "1:1"},
+  "rail": {
+    "enabled": true, "mode": "fullwidth-tight-gaussian-blur-only",
+    "x": 0, "y": 1318, "width": 1080, "height": 90,
+    "blurSigma": 28, "blurSteps": 3, "darkOpacity": 0.0,
+    "captionBaseline": 1385, "targetVerticalPaddingPx": [6, 12]
+  },
+  "caption": {
+    "normalSize": 64, "accentSize": 64, "highlightSize": 64,
+    "physicalLines": 1, "maxWidth": 920, "weight": 850,
+    "displayPunctuation": false
+  }
+}

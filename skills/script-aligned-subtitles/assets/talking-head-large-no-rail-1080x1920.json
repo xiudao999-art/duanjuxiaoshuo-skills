@@ -1,0 +1,11 @@
+{
+  "schema": "script-aligned-subtitle-style-v1",
+  "name": "talking-head-large-no-rail-1080x1920",
+  "canvas": {"width": 1080, "height": 1920, "fps": 25, "sampleAspectRatio": "1:1"},
+  "rail": {"enabled": false},
+  "caption": {
+    "normalSize": 88, "accentSize": 88, "highlightSize": 96,
+    "maximumPhysicalLines": 2, "lineGap": 160, "captionBaseline": 1450,
+    "maxWidth": 920, "weight": 850, "displayPunctuation": false
+  }
+}

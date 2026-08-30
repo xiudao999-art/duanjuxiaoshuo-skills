@@ -1,11 +1,11 @@
 ---
 name: produce-two-minute-drama-recap
-description: Produce roughly two-minute vertical short-drama recap videos spanning one continuous 4–8 episode story arc. Use when Codex must write a high-retention Chinese narration script, mix it with complete original dialogue, select unique semantically aligned drama shots, generate MiniMax narration, build script-aligned punctuation-free captions with CK emphasis effects, keep drama footage and dialogue at original speed while retiming narration, match narration/dialogue loudness, burn a persistent source notice, and deliver a quality-controlled MP4.
+description: Plan and produce batches of roughly two-minute vertical short-drama recap videos from a complete series or one 4–8 episode arc. Use when Codex must transcribe a whole drama, derive 10–16 overlapping episode windows with different central story questions, write high-retention Chinese narration, mix complete original dialogue, select globally non-repetitive evidence shots, generate MiniMax narration, build script-aligned punctuation-free captions with CK emphasis effects, preserve source footage and dialogue speed, and deliver quality-controlled MP4 files.
 ---
 
 # Produce Two-Minute Drama Recap
 
-Build one complete 110–130 second recap from a continuous 4–8 episode arc. Treat episode footage and transcripts as evidence; never invent a plot fact to improve the hook.
+Build one complete 110–130 second recap or plan a differentiated batch from the full series. Treat episode footage and transcripts as evidence; never invent a plot fact to improve the hook.
 
 ## Load the production stack
 
@@ -18,15 +18,84 @@ Read these skills before production:
 5. `build-ck-highlight-captions` for semantic emphasis placement.
 6. `remotion-best-practices` only when the project uses Remotion assembly.
 
-Read [references/narration-method.md](references/narration-method.md) before writing. Read [references/workflow-contract.md](references/workflow-contract.md) before binding media. Read [references/qc-checklist.md](references/qc-checklist.md) before delivery.
+Read [references/narration-method.md](references/narration-method.md) before writing. For a whole-series batch, read [references/whole-series-planning.md](references/whole-series-planning.md) and [references/narrative-lenses.md](references/narrative-lenses.md) before selecting episodes. Read [references/workflow-contract.md](references/workflow-contract.md) before binding media. Read [references/qc-checklist.md](references/qc-checklist.md) before delivery.
+
+Read [references/category-editing-playbook.md](references/category-editing-playbook.md)
+after binding a window to `F01`–`F10` and before writing or selecting footage.
+Apply only the rules recorded under that family; do not turn a sample-derived
+category rule into a global default.
+
+Read [references/category-story-selection.md](references/category-story-selection.md)
+before locking the event path. Grade proposed events as causal spine, motive
+evidence, category evidence, or decoration/repetition, and apply the required
+event slots for the assigned family. Category determines which events belong;
+it must not leak taxonomy jargon into spoken narration.
+
+When the user requests 8–10 reusable templates, 50–70 candidate narratives,
+taxonomy validation against real episodes, or a capacity estimate, also read
+[references/template-validation.md](references/template-validation.md). Keep
+candidate hypotheses separate from production-eligible windows.
+
+## Choose the planning mode
+
+- Use `continuous_arc` for one recap drawn from one continuous 4–8 episode arc.
+- Use `overlapping_question` for a whole-series batch. Transcribe the full series first, then plan 10–16 windows for a normal 40-episode drama. Permit episode overlap across windows only when the central question, core event path, payoff, narration, and principal footage are materially different.
+
+For `overlapping_question`, start from [assets/series-plan-template.json](assets/series-plan-template.json) and validate the batch before writing individual scripts:
+
+```powershell
+python scripts/validate_series_plan.py series-plan.json
+```
+
+Do not treat a shifted episode range as a new story. Reject two windows when their core-event overlap exceeds the declared threshold or when one can be summarized with the other window's central question.
+
+## Build the whole-series corpus
+
+Complete these steps before selecting windows in `overlapping_question` mode:
+
+1. Inventory every episode and extract all spoken dialogue and narration with episode-local timestamps. Preserve verbatim source text and mark uncertain recognition instead of silently rewriting it.
+2. Obtain word timings for safe dialogue cuts. Add speaker labels, character aliases, on-screen text, locations, visible actions, important objects, and shot-quality tags.
+3. Build an event ledger. Give every event a stable ID, participants, goal, obstacle, action, reaction, consequence, reveal, emotional change, evidence ranges, and dependencies.
+4. Build temporal, causal, relationship, reveal, contrast, and motif links between events.
+5. Record transcript coverage and unresolved low-confidence regions. Do not declare the corpus complete while an episode is missing.
+
+The full transcript is the factual source; summaries and generated narration are derived views.
+
+## Plan overlapping story windows
+
+For taxonomy expansion, first extract 4–8 story atoms per normal episode and
+generate short validation drafts. Apply deterministic factual and duplication
+gates before simulated scoring, then expand only shortlisted candidates into
+production narration. Never treat the 50–70 hypothesis pool as a guaranteed
+delivery count; report the surviving production-eligible count separately.
+
+For a normal 40-episode drama, generate more candidates than needed, score them, then retain 10–16 final windows. Each window must:
+
+1. Cover a coherent 4–8 episode span. It may share episodes with another window.
+2. State one unique central question and one visible payoff.
+3. Use 6–8 causal units with at least 3 core events that define this window's identity.
+4. Apply one primary narrative lens from [references/narrative-lenses.md](references/narrative-lenses.md).
+5. Assign one required `storyType` from the six-category production taxonomy and one more specific `narrativeLens`.
+6. Explain its novelty relative to the most similar accepted window.
+7. Keep core-event overlap with every accepted window at or below `0.40` by default.
+8. Reserve ordinary source ranges globally after selection. Permit an iconic callback at most twice and document why its function differs.
+9. Map every required category-specific story slot in
+   [references/category-story-selection.md](references/category-story-selection.md)
+   to a supported event ID before narration expansion.
+
+Rank candidates by hook strength, causal coherence, escalation, visual evidence, payoff, and batch novelty. Quality controls the final count: do not pad a thin drama to 16 windows.
 
 ## Lock the story arc
 
-1. Inventory and transcribe the candidate episodes.
-2. Select 4–8 consecutive episodes that contain one causal arc. Do not combine unrelated subplots to reach the episode count.
+1. Load the approved series window or inventory and transcribe the candidate episodes.
+2. Select 4–8 episodes that contain one causal arc. Keep them consecutive unless the approved window documents a necessary causal bridge. Do not combine unrelated subplots to reach the episode count.
 3. Write one central question and one visible payoff decision.
 4. Create 6–8 escalating story units. Make at least three units change the audience's understanding of a relationship, goal, evidence, identity, or consequence.
 5. End after the payoff decision and one new consequence question. Do not postpone the result promised by the hook.
+6. Grade every proposed event as `A causal spine`, `B motive evidence`,
+   `C category evidence`, or `D decoration_or_repeat`. Keep all required A
+   events, enough B events to make choices credible, only relevant C evidence,
+   and reject D by default.
 
 Start from [assets/job-template.json](assets/job-template.json). Validate the plan before TTS or editing:
 
@@ -35,6 +104,16 @@ python scripts/validate_recap_job.py job.json
 ```
 
 Stop when validation reports an error. Treat warnings as editorial review items.
+
+When the job belongs to a whole-series plan, set `planningMode=overlapping_question`, bind `seriesPlanWindowId`, `storyType`, `storyTypeLabel`, `narrativeLens`, `narrativeLensLabel`, `eventIds`, `coreEventIds`, and `noveltyRationale`, and copy only facts and evidence approved in that series window.
+
+Make the narrative identity visible in production records and delivery naming. Use this filename form unless the user specifies another convention:
+
+```text
+NN《剧名》第X集至第Y集【一级类型·具体镜头】标题.mp4
+```
+
+Also copy both type fields into `qc-report.json`. Do not burn a large type label into the picture unless requested; the filename and manifest are the default identification surfaces.
 
 ## Write the approved mixed script
 
@@ -51,6 +130,18 @@ Use this time architecture:
 - `01:45–02:00`: payoff plus a consequence-based cliffhanger.
 
 Write narration as action → reaction → consequence. Use stable relationship labels until names become necessary. Use a turn word only when new information invalidates an expectation. Preserve dialogue only when it is irreplaceable evidence: a promise, denial, public allegiance, or irreversible decision.
+
+Do not repair a missing event slot with interpretation. If a relationship
+change, resource transfer, identity proof, or rescue signal has no supported
+source event, reject or relabel the candidate before writing.
+
+Choose one primary category pattern from
+[references/category-editing-playbook.md](references/category-editing-playbook.md).
+Let that pattern control what may be expanded, where original dialogue may
+replace narration, and what visual bridge is required. In F03 and F07, a
+complete 5–12 second dialogue island may carry a relationship change or
+distress signal. In F01 and F08, prefer concise causal narration and visible
+evidence over long conversational texture.
 
 Write the script with locked beats:
 
@@ -75,6 +166,11 @@ Do not rewrite a locked `★` or `☆` beat after approval unless the user chang
 7. Use complete dialogue from the first spoken word through the last spoken word. Preserve 0.30–0.50 seconds after the final word when the next utterance does not begin.
 8. Add 30 ms audio fades at every edit boundary. Never overlap narration with original dialogue.
 9. Loudness-match every narration and original-dialogue block to the same speech target before concatenation. Measure the two block classes separately; a final whole-program normalization alone is insufficient.
+10. Update the batch reuse ledger as soon as a source range or narration claim is locked. Check both exact range overlap and semantic repetition across completed videos.
+11. For F03 and F07, do not trust ASR silence when burned-in source subtitles,
+    continuing mouth movement, crying, or overlapping music indicate dialogue.
+    Review the image, waveform, subtitle text, and question-answer closure
+    before deleting the range.
 
 ## Assemble and caption
 
@@ -104,6 +200,7 @@ Keep these in every job:
 - `broll-audit.json`: each narration beat mapped to source episode ranges.
 - `render/`: reusable blocks, clean master, packaged master, and delivery master.
 - `qc-report.json`: technical and editorial checks.
+- `series-plan.json` and `used-segments-ledger.json` for a whole-series batch.
 
 ## Stop conditions
 
@@ -125,3 +222,6 @@ Do not deliver when any condition is true:
 - The source notice disappears or a lower-frame mask obscures footage.
 - The final narration sentence has less than `0.45 s` planned tail or less than `0.35 s` measured trailing silence after rendering.
 - Final integrated loudness falls outside approximately `-15.0` to `-13.0 LUFS`, or true peak exceeds `-1 dBTP`.
+- A whole-series window duplicates another window's central question, exceeds the approved core-event overlap threshold, or reuses principal footage without an audited exception.
+- A candidate-pool count is reported as a production count before the hard
+  gates and global difference test in `references/template-validation.md`.

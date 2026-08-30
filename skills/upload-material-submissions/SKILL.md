@@ -83,6 +83,21 @@ Upload and create all submissions:
 python scripts/upload_material_submissions.py ... --execute
 ```
 
+On Windows, if Python `requests` is repeatedly reset during a large multipart
+upload while a small `curl.exe` upload succeeds, switch only the file-transfer
+layer and retain the same manifest/submission workflow:
+
+```powershell
+python scripts/upload_material_submissions.py ... --execute `
+  --curl-upload --transport-ascii-names --curl-limit-rate 1M
+```
+
+The curl path keeps the bearer token in a temporary header file rather than the
+process command line. Diagnose with one requested file first; do not use this
+flag to blindly replay an unknown upload outcome. If a long batch still sees
+intermittent connection resets, query the failed filename first and retry that
+entry with a lower rate such as `--curl-limit-rate 768K`.
+
 Read [references/api-contract.md](references/api-contract.md) when diagnosing API responses, changing destination configuration, or implementing another client.
 
 ## Delivery report

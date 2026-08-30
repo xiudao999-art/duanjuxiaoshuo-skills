@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from datetime import datetime
@@ -39,6 +40,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-drama", action="append", default=[])
     parser.add_argument("--only-drama", action="append", default=[])
     parser.add_argument("--transport-ascii-names", action="store_true")
+    parser.add_argument(
+        "--curl-upload",
+        action="store_true",
+        help="Use curl.exe for multipart file transfer while retaining manifest and submission handling.",
+    )
+    parser.add_argument(
+        "--curl-limit-rate",
+        default="1M",
+        help="curl transfer-rate limit used by --curl-upload (for example 768K or 1M).",
+    )
     parser.add_argument("--retry-unknown", action="store_true")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--upload-only", action="store_true")
@@ -157,6 +168,47 @@ def login(session: requests.Session, api_base: str, user: str, password: str) ->
     return token
 
 
+def upload_with_curl(
+    api_base: str,
+    token: str,
+    path: Path,
+    transport_name: str,
+    limit_rate: str,
+) -> dict[str, Any]:
+    """Upload with curl without exposing the bearer token in the process command line."""
+    with tempfile.TemporaryDirectory(prefix="material-curl-upload-") as temporary:
+        temporary_path = Path(temporary)
+        header_path = temporary_path / "authorization.txt"
+        response_path = temporary_path / "response.json"
+        header_path.write_text(f"Authorization: Bearer {token}\n", encoding="utf-8")
+        command = [
+            "curl.exe",
+            "--silent",
+            "--show-error",
+            "--connect-timeout", "30",
+            "--max-time", "900",
+            "--http1.1",
+            "--limit-rate", limit_rate,
+            "--output", str(response_path),
+            "--write-out", "%{http_code}",
+            "--header", f"@{header_path}",
+            "--form", f"file=@{path};filename={transport_name};type=video/mp4",
+            "--form", f"scope={REQUIRED_SCOPE}",
+            f"{api_base}/admin/uploads/file",
+        ]
+        completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        body = response_path.read_text(encoding="utf-8-sig") if response_path.exists() else ""
+        if completed.returncode != 0:
+            raise requests.RequestException(f"curl exit={completed.returncode}: {completed.stderr.strip()}")
+        status_text = completed.stdout.strip()
+        if status_text != "200":
+            raise requests.HTTPError(f"upload http={status_text}: {body[:500]}")
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"Upload response was not JSON: {body[:500]}") from exc
+
+
 def run() -> int:
     args = parse_args()
     if args.scope.strip("/") != REQUIRED_SCOPE:
@@ -197,20 +249,29 @@ def run() -> int:
         path = Path(entry["local_file"])
         if not entry.get("oss_key"):
             try:
-                with path.open("rb") as stream:
-                    transport_name = path.name
-                    if args.transport_ascii_names:
-                        digest = hashlib.sha256(str(path).encode("utf-8")).hexdigest()[:20]
-                        transport_name = f"video-{digest}.mp4"
-                    response = session.post(
-                        f"{api_base}/admin/uploads/file",
-                        headers=headers,
-                        files={"file": (transport_name, stream, "video/mp4")},
-                        data={"scope": REQUIRED_SCOPE},
-                        timeout=(30, 900),
+                transport_name = path.name
+                if args.transport_ascii_names:
+                    digest = hashlib.sha256(str(path).encode("utf-8")).hexdigest()[:20]
+                    transport_name = f"video-{digest}.mp4"
+                if args.curl_upload:
+                    result = upload_with_curl(
+                        api_base,
+                        token,
+                        path,
+                        transport_name,
+                        args.curl_limit_rate,
                     )
-                response.raise_for_status()
-                result = response.json()
+                else:
+                    with path.open("rb") as stream:
+                        response = session.post(
+                            f"{api_base}/admin/uploads/file",
+                            headers=headers,
+                            files={"file": (transport_name, stream, "video/mp4")},
+                            data={"scope": REQUIRED_SCOPE},
+                            timeout=(30, 900),
+                        )
+                    response.raise_for_status()
+                    result = response.json()
                 oss_key = result.get("oss_key", "")
                 if not oss_key.startswith(f"{REQUIRED_SCOPE}/"):
                     raise RuntimeError(f"Unexpected oss_key prefix: {oss_key}")

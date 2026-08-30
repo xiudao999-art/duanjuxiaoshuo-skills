@@ -99,6 +99,18 @@ def main() -> None:
     args = parser.parse_args()
 
     data = load(args.beat_map)
+    profile = str(data.get("narrative_profile") or "P01_dual_time_conflict")
+    profile_rules = {
+        "P01_dual_time_conflict": (0.50, 0.55, 7.0, True),
+        "P02_agency_counterattack": (0.40, 0.45, 6.0, False),
+        "P03_relationship_progression": (0.35, 0.40, 6.0, False),
+        "P03_relationship_arc": (0.35, 0.40, 6.0, False),
+        "P04_reveal_investigation": (0.45, 0.50, 6.0, False),
+        "P05_contrast_anthology": (0.25, 0.30, 4.5, False),
+    }
+    exact_clip_floor, exact_duration_floor, average_clip_floor, no_under_five = profile_rules.get(
+        profile, profile_rules["P01_dual_time_conflict"]
+    )
     beats = [row for row in data.get("beats", []) if isinstance(row, dict)]
     clips = [row for row in data.get("clips", []) if isinstance(row, dict)]
     ledger_rows = as_rows(load(args.event_ledger))
@@ -278,13 +290,15 @@ def main() -> None:
         "scriptRoundtrip": metrics["scriptRoundtrip"],
         "storyPlanHashMatches": metrics["storyPlanHashMatches"],
         "eventLedgerResolved": metrics["eventLedgerResolved"],
-        "exactMatchClipRatio": metrics["exactMatchClipRatio"] >= 0.50,
-        "exactMatchDurationRatio": metrics["exactMatchDurationRatio"] >= 0.55,
+        "exactMatchClipRatio": metrics["exactMatchClipRatio"] >= exact_clip_floor,
+        "exactMatchDurationRatio": metrics["exactMatchDurationRatio"] >= exact_duration_floor,
         "exactOrContextDurationRatio": metrics["exactOrContextDurationRatio"] >= 0.90,
         "neutralDurationRatio": metrics["neutralDurationRatio"] <= 0.10,
         "visualCoverageRatio": metrics["visualCoverageRatio"] >= 0.999,
-        "averageSourceClipDuration": metrics["averageSourceClipDuration"] >= 7.0,
-        "sourceClipUnder5SecondsCount": metrics["sourceClipUnder5SecondsCount"] == 0,
+        "averageSourceClipDuration": metrics["averageSourceClipDuration"] >= average_clip_floor,
+        "sourceClipUnder5SecondsCount": (
+            metrics["sourceClipUnder5SecondsCount"] == 0 if no_under_five else True
+        ),
         "maximumCutsPerRolling30Seconds": metrics["maximumCutsPerRolling30Seconds"] <= 4,
         "contradictionCount": metrics["contradictionCount"] == 0,
         "unboundBeatCount": metrics["unboundBeatCount"] == 0,

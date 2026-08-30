@@ -42,31 +42,49 @@ SHORT_DRAMA_CAPTION_STYLE = {
 
 def resolve_short_drama_rail(config: dict) -> dict:
     """Resolve the visible rail independently from the STTN mask map."""
-    cover = ((config.get("output") or {}).get("narrationSourceSubtitleCover") or {})
+    output = config.get("output") or {}
+    cover = output.get("narrationSourceSubtitleCover") or {}
     configured = cover.get("rail")
     rail = dict(SHORT_DRAMA_RAIL)
     if isinstance(configured, dict):
         rail.update(configured)
+
     expected = {
-        "enabled": True, "x": 0, "y": 1318, "width": 1080, "height": 90,
-        "blurSigma": 28.0, "darkOpacity": 0.0, "captionBaseline": 1385,
+        "enabled": True,
+        "x": 0,
+        "width": 1080,
+        "blurSigma": 28.0,
+        "darkOpacity": 0.0,
     }
     actual = {
         "enabled": bool(rail.get("enabled", True)),
-        "x": int(rail.get("x", 0)), "y": int(rail.get("y", 1318)),
-        "width": int(rail.get("width", 1080)), "height": int(rail.get("height", 90)),
+        "x": int(rail.get("x", 0)),
+        "y": int(rail.get("y", 1318)),
+        "width": int(rail.get("width", 1080)),
+        "height": int(rail.get("height", 90)),
         "blurSigma": float(rail.get("blurSigma", 28.0)),
         "darkOpacity": float(rail.get("darkOpacity", 0.0)),
         "captionBaseline": int(rail.get("captionBaseline", 1385)),
     }
-    if actual != expected:
+    for key, value in expected.items():
+        if actual[key] != value:
+            raise RuntimeError(
+                "short-drama subtitle rail violates the full-width blur-only contract; "
+                f"field={key} expected={value} actual={actual[key]} rail={actual}"
+            )
+    if not 1260 <= actual["y"] <= 1460 or not 80 <= actual["height"] <= 104:
         raise RuntimeError(
-            "short-drama subtitle rail differs from the locked global profile; "
-            f"expected={expected} actual={actual}"
+            "source-aligned short-drama rail must stay inside the safe tight-band bounds; "
+            f"actual={actual}"
         )
-    baseline = int(config.get("caption_baseline_px", 1385))
-    if baseline != 1385:
-        raise RuntimeError(f"short-drama caption baseline must be 1385, got {baseline}")
+    if not actual["y"] + 52 <= actual["captionBaseline"] <= actual["y"] + actual["height"] - 10:
+        raise RuntimeError(f"caption baseline does not fit the source-aligned rail: actual={actual}")
+    baseline = int(config.get("caption_baseline_px", actual["captionBaseline"]))
+    if baseline != actual["captionBaseline"]:
+        raise RuntimeError(
+            "caption_baseline_px conflicts with short-drama-vsr-tight-rail-1080x1920: "
+            f"expected={actual['captionBaseline']} actual={baseline}"
+        )
     rail.update(actual)
     return rail
 
@@ -180,9 +198,37 @@ def masks_for_episode(mask_map: dict, episode: int) -> list[list[int]]:
     return result
 
 
-def clip_key(episode: int, start: float, end: float, masks: list[list[int]]) -> str:
+def source_fingerprint(path: Path) -> dict:
+    """Return a cheap source identity suitable for a persistent render cache."""
+    stat = path.stat()
+    return {
+        "path": str(path.resolve()).casefold(),
+        "size": stat.st_size,
+        "mtimeNs": stat.st_mtime_ns,
+    }
+
+
+def clip_key(
+    episode: int,
+    start: float,
+    end: float,
+    masks: list[list[int]],
+    source: dict,
+    rail: dict,
+) -> str:
     payload = json.dumps(
-        {"episode": episode, "start": round(start, 3), "end": round(end, 3), "masks": masks},
+        {
+            "schema": "vsr-sttn-cleaned-clip-v2",
+            "episode": episode,
+            "start": round(start, 3),
+            "end": round(end, 3),
+            "masks": masks,
+            "source": source,
+            "rail": rail,
+            "width": WIDTH,
+            "height": HEIGHT,
+            "fps": FPS,
+        },
         sort_keys=True,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
@@ -243,6 +289,14 @@ def main() -> None:
     parser.add_argument("--output-config", type=Path, required=True)
     parser.add_argument("--vsr-root", type=Path, default=Path(r"D:\codex\短剧剪辑\tools\video-subtitle-remover"))
     parser.add_argument("--work-root", type=Path, help="Optional VSR scratch root on a volume with sufficient free space.")
+    parser.add_argument(
+        "--cache-root",
+        type=Path,
+        help=(
+            "Persistent series-level cache for cleaned clips. Reuse the same path across recap jobs; "
+            "the cache key includes source identity, exact range, masks, rail geometry, and frame contract."
+        ),
+    )
     parser.add_argument("--max-batch-frames", type=int, default=450, help="Maximum frames per STTN invocation.")
     parser.add_argument("--max-idle-gpu-memory-mib", type=int, default=1800)
     parser.add_argument("--gpu-poll-seconds", type=int, default=20)
@@ -262,17 +316,17 @@ def main() -> None:
         raise RuntimeError(f"VSR mask review evidence is missing: {review_evidence}")
     source_root = Path(config["source_root"])
     work_root = args.work_root or (Path(config["production_scratch_root"]) / "vsr-sttn-narration")
+    cache_root = args.cache_root or work_root
     raw_root = work_root / "raw"
     batch_root = work_root / "batches"
-    cleaned_root = work_root / "cleaned-with-rail"
+    cleaned_root = cache_root / "cleaned-with-rail"
     vsr_python = args.vsr_root / ".venv-gpu" / "Scripts" / "python.exe"
     vsr_main = args.vsr_root / "backend" / "main.py"
-    if not vsr_python.exists() or not vsr_main.exists():
-        raise RuntimeError(f"VSR/STTN runtime missing under {args.vsr_root}")
 
     bindings = []
     unique = {}
     rail = resolve_short_drama_rail(config)
+    source_fingerprints = {}
     for job in config["jobs"]:
         manual = job.get("manual_broll") or {}
         for block_id, specs in manual.items():
@@ -283,7 +337,11 @@ def main() -> None:
                 if end <= start:
                     raise RuntimeError(f"invalid final EDL range: job={job['number']} {block_id} {spec}")
                 masks = masks_for_episode(mask_map, episode)
-                key = clip_key(episode, start, end, masks)
+                source_path = source_for_episode(source_root, episode)
+                source_fingerprints.setdefault(episode, source_fingerprint(source_path))
+                key = clip_key(
+                    episode, start, end, masks, source_fingerprints[episode], rail
+                )
                 unique.setdefault(key, {
                     "key": key,
                     "episode": episode,
@@ -291,11 +349,23 @@ def main() -> None:
                     "end": end,
                     "duration": end - start,
                     "masks": masks,
+                    "source": source_fingerprints[episode],
                 })
                 bindings.append((job, block_id, spec_index, key))
 
+    cleaned_paths = {}
+    pending_unique = {}
+    for key, clip in unique.items():
+        cached = cleaned_root / f"{key}.mp4"
+        expected_frames = max(1, round(float(clip["duration"]) * FPS))
+        cached_frames = frame_count(cached)
+        if expected_frames - 3 <= cached_frames <= expected_frames:
+            cleaned_paths[key] = cached
+        else:
+            pending_unique[key] = clip
+
     groups = defaultdict(list)
-    for clip in unique.values():
+    for clip in pending_unique.values():
         groups[json.dumps(clip["masks"], sort_keys=True)].append(clip)
 
     plan = {
@@ -305,7 +375,13 @@ def main() -> None:
         "preserveOriginalComposition": True,
         "maskReviewStatus": mask_map["reviewStatus"],
         "maskReviewEvidence": str(review_evidence),
+        "subtitleStyleProfile": SHORT_DRAMA_SUBTITLE_STYLE,
+        "railSource": "locked-job-profile",
+        "legacyMaskMapRailIgnored": isinstance(mask_map.get("rail"), dict),
         "clipCount": len(unique),
+        "cacheRoot": str(cache_root),
+        "cacheHitCount": len(cleaned_paths),
+        "cacheMissCount": len(pending_unique),
         "groupCount": len(groups),
         "groups": [],
     }
@@ -317,13 +393,21 @@ def main() -> None:
                 "clips": [{key: value for key, value in clip.items() if key != "masks"} for clip in clips],
             })
         dump(args.output_config.with_suffix(".vsr-plan.json"), plan)
-        print(json.dumps({"dryRun": True, "clips": len(unique), "groups": len(groups)}, ensure_ascii=False))
+        print(json.dumps({
+            "dryRun": True,
+            "clips": len(unique),
+            "cacheHits": len(cleaned_paths),
+            "cacheMisses": len(pending_unique),
+            "groups": len(groups),
+        }, ensure_ascii=False))
         return
+
+    if groups and (not vsr_python.exists() or not vsr_main.exists()):
+        raise RuntimeError(f"VSR/STTN runtime missing under {args.vsr_root}")
 
     raw_root.mkdir(parents=True, exist_ok=True)
     batch_root.mkdir(parents=True, exist_ok=True)
     cleaned_root.mkdir(parents=True, exist_ok=True)
-    cleaned_paths = {}
     executed_batch_count = 0
     for group_index, clips in enumerate(groups.values(), 1):
         merged_ranges = merge_overlapping_clips(clips)
@@ -415,6 +499,8 @@ def main() -> None:
             for segment in segment_map:
                 clip = segment["clip"]
                 cleaned = cleaned_root / f"{clip['key']}.mp4"
+                if cleaned.exists() and frame_count(cleaned) != segment["frames"]:
+                    cleaned.unlink()
                 if not cleaned.exists():
                     base_filter = f"trim=start_frame={segment['startFrame']}:end_frame={segment['endFrame']},setpts=PTS-STARTPTS,setsar=1"
                     temp = cleaned.with_name(cleaned.stem + "-sttn-only.mp4")
@@ -440,6 +526,9 @@ def main() -> None:
             })
 
     plan["executedBatchCount"] = executed_batch_count
+    plan["cacheHitCount"] = len(unique) - sum(
+        len(group.get("clips", [])) for group in plan["groups"]
+    )
 
     for job, block_id, spec_index, key in bindings:
         spec = job["manual_broll"][block_id][spec_index]
@@ -464,7 +553,14 @@ def main() -> None:
     output["narrationSourceSubtitleCover"] = cover
     dump(work_root / "vsr-plan.json", plan)
     dump(args.output_config, config)
-    print(json.dumps({"outputConfig": str(args.output_config), "clips": len(unique), "groups": len(groups)}, ensure_ascii=False))
+    print(json.dumps({
+        "outputConfig": str(args.output_config),
+        "clips": len(unique),
+        "cacheHits": len(unique) - len(pending_unique),
+        "cacheMisses": len(pending_unique),
+        "executedBatches": executed_batch_count,
+        "groups": len(groups),
+    }, ensure_ascii=False))
 
 
 if __name__ == "__main__":

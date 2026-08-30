@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "dramaTitle": "",
+  "totalEpisodes": 40,
+  "planningMode": "overlapping_question",
+  "targetWindowCount": {"min": 10, "max": 16},
+  "corpus": {
+    "fullTranscriptPath": "series-corpus.jsonl",
+    "wordTimingPath": "word-timings",
+    "eventLedgerPath": "events.jsonl",
+    "storyGraphPath": "story-graph.json",
+    "transcribedEpisodes": []
+  },
+  "reusePolicy": {
+    "allowEpisodeOverlap": true,
+    "maximumCoreEventOverlapRatio": 0.4,
+    "maximumIconicShotUses": 2,
+    "maximumNarrationSemanticSimilarity": 0.82
+  },
+  "windows": [
+    {
+      "id": "W01",
+      "title": "",
+      "storyType": "continuous_plot",
+      "storyTypeLabel": "连续剧情窗口",
+      "narrativeLens": "result_first",
+      "narrativeLensLabel": "结果倒叙",
+      "familyId": "F01",
+      "storySelection": {
+        "patternId": "causal_spine",
+        "requiredSlots": [
+          {"slot": "abnormal_result_or_objective", "eventIds": ["E006"]},
+          {"slot": "direct_cause", "eventIds": ["E001"]},
+          {"slot": "distinct_obstacles", "eventIds": ["E002", "E003"]},
+          {"slot": "evidence_or_information_reversal", "eventIds": ["E004"]},
+          {"slot": "visible_action_result", "eventIds": ["E005", "E006"]}
+        ],
+        "eventGrades": {
+          "A": ["E001", "E002", "E003", "E004", "E005", "E006"],
+          "B": [],
+          "C": [],
+          "D": []
+        },
+        "removedByLastDedup": [],
+        "hookPromise": "",
+        "payoffEvidenceEventIds": ["E006"]
+      },
+      "centralQuestion": "",
+      "payoff": "",
+      "episodes": [1, 2, 3, 4],
+      "skipReasons": [],
+      "eventIds": ["E001", "E002", "E003", "E004", "E005", "E006"],
+      "coreEventIds": ["E001", "E004", "E006"],
+      "hookEventId": "E006",
+      "noveltyRationale": "",
+      "deliveryFilename": "01《剧名》第1集至第4集【连续剧情窗口·结果倒叙】标题.mp4",
+      "score": {
+        "hook": 0,
+        "causalCoherence": 0,
+        "escalation": 0,
+        "evidence": 0,
+        "payoff": 0,
+        "novelty": 0,
+        "editability": 0
+      }
+    }
+  ]
+}

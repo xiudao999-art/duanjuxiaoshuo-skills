@@ -26,7 +26,7 @@ foreach ($file in $pythonFiles) {
     }
 }
 
-$secretPattern = '(sk-[A-Za-z0-9_-]{16,}|Bearer\s+[A-Za-z0-9._-]{16,}|api[_-]?key\s*[=:]\s*[A-Za-z0-9_-]{16,})'
+$secretPattern = '(sk-[A-Za-z0-9_-]{16,}|Bearer[ \t]+[A-Za-z0-9._-]{16,}|api[_-]?key[ \t]*[=:][ \t]*[A-Za-z0-9_-]{16,})'
 foreach ($file in Get-ChildItem -LiteralPath $PSScriptRoot -Recurse -File) {
     if ($file.Extension -in @('.wav', '.mp3', '.mp4', '.mov', '.png', '.jpg', '.jpeg', '.pyc')) {
         continue

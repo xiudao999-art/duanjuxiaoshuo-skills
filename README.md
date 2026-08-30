@@ -82,3 +82,13 @@ produce-two-minute-drama-recap
 ```
 
 验证脚本会检查 Skill 目录、YAML 基础结构、Python 语法以及常见凭据模式。
+
+## 迁移
+
+完整的依赖安装、凭证配置、目录规划、素材上传断点续传和验收步骤见 [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)。
+
+生成不含凭证和媒体文件的可迁移压缩包：
+
+```powershell
+.\build-portable-package.ps1
+```

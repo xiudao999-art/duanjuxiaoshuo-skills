@@ -86,10 +86,14 @@ def main() -> None:
         if "".join(str(row.get("beat_text") or row.get("narration_sentence") or "") for row in rows) != block_text:
             raise RuntimeError(f"beat text does not round-trip for {block_id}")
         raw_end = max(float(row.get("tts_end") or 0) for row in rows)
-        speech_duration = float(timeline.get("speechDuration") or 0)
-        if raw_end <= 0 or speech_duration <= 0:
+        # The reviewed picture rail covers the full narration block, including an
+        # intentional tail pad.  Use that full duration for beat-to-picture
+        # mapping; using speechDuration alone leaves the tail visually unbound
+        # and shifts the final beat away from the actual edit timeline.
+        mapped_duration = float(timeline.get("duration") or timeline.get("speechDuration") or 0)
+        if raw_end <= 0 or mapped_duration <= 0:
             raise RuntimeError(f"invalid timing basis for {block_id}")
-        timing_scale = speech_duration / raw_end
+        timing_scale = mapped_duration / raw_end
         block_start = float(timeline.get("timelineStart") or 0)
         picture_cursor = block_start
         approved_parts.append(block_text)

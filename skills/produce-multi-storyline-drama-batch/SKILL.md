@@ -106,6 +106,17 @@ improve alignment metrics.
   footage placement. Split adjacent narration into semantic beats of one to
   three sentences that describe the same event; do not force one cut per
   sentence.
+- Freeze the mastered narration cache before the motion preflight. Record the
+  SHA-256 and duration of every WAV plus its word-timing/text sidecars, and
+  reuse those exact files for preview and final rendering. Do not resynthesize
+  after picture durations are approved: provider variance can lengthen one
+  block, silently create final-frame holds, and reintroduce freeze-then-cut.
+  If the locked audio is unavailable or its hash changes, invalidate the
+  preflight and preview before rendering rather than padding the picture.
+  Stage a repair render with `python scripts/stage_locked_narration_cache.py
+  <approved-cache> <new-production/job-id/narration> --output-manifest
+  <new-production/job-id/qc/narration-lock-manifest.json>`; do not use a shell
+  wildcard copy that can silently stage zero files.
 - Create `planning/narration-beat-maps/<job-id>.json`. Every beat must contain
   the approved narration text, real TTS start/end, event IDs, required
   characters/action/location/time state, and its reviewed clip bindings. Event
@@ -210,6 +221,13 @@ Read [hard-subtitle-treatment.md](references/hard-subtitle-treatment.md). Treat 
 - Batch clips by identical subtitle geometry, run STTN once per batch, split
   them back on exact frame boundaries, and bind every cleaned clip path into
   the final EDL. Never silently fall back to crop/zoom or a different shot.
+- Use one persistent series-level VSR cache across previews, repairs, and all
+  recap jobs. Invoke `scripts/prepare_vsr_narration_clips.py` with a stable
+  `--cache-root <series>/edit/.vsr-cache/sttn-narration-v2`; use `--work-root`
+  only for disposable raw/batch intermediates. The cache key must include the
+  source-file identity, exact frame range, reviewed masks, blur-rail geometry,
+  output size, and fps. Run STTN only for cache misses. A full cache hit must
+  write the bound output config without loading the GPU model.
 - Add a clearly visible one-line smooth Gaussian/frosted blur rail over the minimum
   vertical repaired subtitle band, then place the new approved-script caption
   on that rail. Let the rail run edge-to-edge horizontally so it does not look
@@ -271,8 +289,53 @@ Required per-video caption metrics are `scriptRoundtrip=true`, `maximumCharacter
 
 ### Production-safe implementation details
 
+#### Resilient long-running batch execution
+
+- Treat a batch request as one resumable state machine from planning through
+  delivery. A background process is not proof of progress. Persist a live
+  status JSON with `stage`, PID, heartbeat time, log size/age, CPU delta, GPU
+  utilization, GPU memory, completed cache keys, rendered count, and delivered
+  count. User-facing progress must come from this file and verified artifacts,
+  never from a process name alone.
+- Validate every project, source, mask, cache, output, and config path before
+  launch. On Windows, pass Unicode paths as process arguments from a UTF-8
+  Python supervisor. Do not generate a PowerShell continuation script that
+  embeds Chinese paths; mojibake can let expensive VSR work finish while
+  preventing config binding and rendering.
+- Serialize GPU VSR jobs on one device. Before loading STTN, require stable
+  available memory for several polls. Waiting for another healthy GPU job is a
+  valid `waiting-for-gpu` state and must remain visible in the heartbeat; it is
+  not a completed or stalled state.
+- On a 4 GB GPU, default STTN batch size to no more than 700 frames after merged
+  ranges. If CUDA allocation or output-frame validation fails, preserve valid
+  content-addressed cache entries and retry at 450, then 300 frames. Bound the
+  fallback to these three levels; never restart the whole series or loop
+  indefinitely.
+- VSR normally emits progress in 50-frame blocks and can stay quiet while one
+  block is inferred. Declare a stall only when log size, process CPU, and GPU
+  utilization all remain inactive for at least eight minutes and three
+  consecutive samples. Then terminate only that job's process tree and resume
+  from validated cache at the next smaller batch size.
+- A supervisor must own the handoff from VSR to final config binding, rendering,
+  Pilot review, QC, and delivery. It may exit successfully only when the
+  requested MP4/SRT/QC artifact counts exist and final gates pass. If any stage
+  fails, write the exact stage, command, error log, completed cache-key count,
+  and next bounded recovery action to the state file.
+- Keep at least the larger of 12 GB or the estimated remaining intermediates
+  plus final renders free on the work volume before starting an expensive
+  stage. Put disposable VSR batches and render scratch on a separate volume
+  when the delivery drive is close to that reserve.
+
 - Cache TTS by exact narration text, voice, provider, and model. Any script
   change invalidates audio and word-timing artifacts together.
+- Treat the mastered narration WAV and timing sidecars as one immutable edit
+  input after the first motion preflight. Copy or stage the complete cache, not
+  only the WAV, and verify hashes before a repair render.
+- Keep a stable series-level VSR cache separate from per-render scratch. Reuse
+  only content-addressed hits reported by
+  `prepare_vsr_narration_clips.py`; never reuse a file merely because its
+  filename or episode number looks similar. Preserve the cache after delivery;
+  raw concat batches and model-input intermediates remain disposable.
 - For source files with burned subtitles, keep narration framing unchanged and
   bind VSR/STTN-cleaned clips plus the residual caption rail. Preserve the
   original full frame and original hard subtitles during real dialogue and

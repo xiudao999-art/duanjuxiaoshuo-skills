@@ -1,4 +1,4 @@
 interface:
   display_name: "Script-Aligned Subtitles"
-  short_description: "Burn subtitles from approved scripts with ASR timing."
-  default_prompt: "Use $script-aligned-subtitles to burn subtitles that keep the approved script text while using ASR timing."
+  short_description: "Align approved captions in two locked video styles."
+  default_prompt: "Use $script-aligned-subtitles to align approved text and select the locked talking-head or short-drama caption style."

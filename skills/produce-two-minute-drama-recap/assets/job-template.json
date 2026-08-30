@@ -1,7 +1,37 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "title": "",
   "dramaTitle": "",
+  "planningMode": "continuous_arc",
+  "seriesPlanWindowId": "",
+  "storyType": "continuous_plot",
+  "storyTypeLabel": "连续剧情窗口",
+  "narrativeLens": "linear_escalation",
+  "narrativeLensLabel": "顺叙升级",
+  "familyId": "F01",
+  "storySelection": {
+    "patternId": "causal_spine",
+    "requiredSlots": [
+      {"slot": "abnormal_result_or_objective", "eventIds": ["E001"]},
+      {"slot": "direct_cause", "eventIds": ["E002"]},
+      {"slot": "distinct_obstacles", "eventIds": ["E003", "E004"]},
+      {"slot": "evidence_or_information_reversal", "eventIds": ["E005"]},
+      {"slot": "visible_action_result", "eventIds": ["E006"]}
+    ],
+    "eventGrades": {
+      "A": ["E001", "E002", "E003", "E004", "E005", "E006"],
+      "B": [],
+      "C": [],
+      "D": []
+    },
+    "removedByLastDedup": [],
+    "hookPromise": "",
+    "payoffEvidenceEventIds": ["E006"]
+  },
+  "eventIds": [],
+  "coreEventIds": [],
+  "noveltyRationale": "",
+  "deliveryFilename": "",
   "targetDurationSeconds": 120,
   "episodeRange": {
     "start": 1,

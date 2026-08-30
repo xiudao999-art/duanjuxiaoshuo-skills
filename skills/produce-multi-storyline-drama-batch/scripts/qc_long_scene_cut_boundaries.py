@@ -108,7 +108,16 @@ def main() -> None:
         raise RuntimeError(f"no completed recap production directories found under {production_root}")
     for production in productions:
         recap_id = production.name
-        delivery = next((args.output_root / "deliveries" / recap_id).glob("*.mp4"))
+        delivery_dir = args.output_root / "deliveries" / recap_id
+        delivery = next(delivery_dir.glob("*.mp4"), None)
+        if delivery is None:
+            staged_master = production / "render" / "master-final.mp4"
+            if not staged_master.is_file() or staged_master.stat().st_size <= 1024:
+                raise FileNotFoundError(
+                    f"no encoded delivery or staged master found for {recap_id}: "
+                    f"{delivery_dir} / {staged_master}"
+                )
+            delivery = staged_master
         job = json.loads((production / "job.json").read_text(encoding="utf-8-sig"))
         audit = json.loads((production / "broll-audit.json").read_text(encoding="utf-8-sig"))
         cuts = collect_cuts(job, audit)

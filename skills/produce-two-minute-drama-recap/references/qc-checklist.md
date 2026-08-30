@@ -2,8 +2,9 @@
 
 ## Story
 
-- [ ] The episode window contains 4–8 consecutive episodes.
+- [ ] The episode window contains 4–8 coherent episodes; any gap has an explicit causal bridge.
 - [ ] One central question controls the whole recap.
+- [ ] `storyType` and `narrativeLens` match the actual viewer promise and event ordering.
 - [ ] The hook creates a visible abnormality and is paid back.
 - [ ] The story contains 6–8 causal units and at least 3 real turns.
 - [ ] No 20-second span is informationally flat.
@@ -53,3 +54,11 @@
 - [ ] True peak is at or below -1 dBTP.
 - [ ] The final file opens, seeks, and reports the expected duration.
 - [ ] The final narration block includes at least 0.45 seconds planned tail and at least 0.35 seconds measured trailing silence.
+
+## Whole-series batch
+
+- [ ] The complete series corpus covers every source episode before final window selection.
+- [ ] Episode overlap is intentional; central questions and visible payoffs are different.
+- [ ] Pairwise core-event overlap is at or below the approved threshold, normally `0.40`.
+- [ ] Principal source ranges and narration claims pass the global reuse audit.
+- [ ] The delivery filename and `qc-report.json` contain the correct Chinese story-type and narrative-lens labels.

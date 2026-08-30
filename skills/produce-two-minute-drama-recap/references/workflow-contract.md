@@ -6,12 +6,15 @@
 - Hash or otherwise identify source versions.
 - Obtain episode-specific word timings and cache them.
 - Build an episode ledger containing characters, locations, actions, decisions, evidence, and unresolved consequences.
+- For a batch, finish the verbatim full-series corpus and global event graph before selecting any final window.
 
 ## 2. Arc selection
 
-- Bind 4–8 consecutive episodes.
+- Bind 4–8 consecutive episodes for one window; allow episode overlap across batch windows.
 - State the central question in one sentence.
 - State the visible payoff decision in one sentence.
+- Record one production `storyType`, one specific `narrativeLens`, and their Chinese labels.
+- Reject a window that duplicates an accepted central question or exceeds the approved core-event overlap threshold.
 - Reject windows that require an unrelated subplot to fill time.
 - Allow a cold-open shot from the bound window, then return to causal order or label the rewind clearly.
 
@@ -85,3 +88,5 @@ At least three units must use a non-`none` turn type.
 - Generate technical QC plus contact frames and boundary inspections.
 - Record word-boundary, two-line spacing, final-sentence tail, mixed-speed, shot-reuse, and narration/dialogue loudness results in machine-readable QC.
 - Keep intermediates so caption or audio repairs do not require re-cutting the story.
+- Include `【一级类型·具体镜头】` in batch delivery filenames and copy both type fields into QC.
+- Update the global source-range and narration-claim ledger after every delivered video.

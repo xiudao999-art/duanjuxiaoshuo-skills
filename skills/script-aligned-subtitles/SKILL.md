@@ -1,6 +1,12 @@
 ---
 name: script-aligned-subtitles
-description: Burn or rebuild video subtitles from an approved script while using ASR/Whisper word timings only for alignment. Use when Chinese or mixed Chinese/English captions must avoid ASR homophone mistakes, preserve exact original copy, keep proper nouns/brand names/song names/BGM terms intact, prevent words from being split across subtitle cues, or re-burn ASS/SRT captions onto Remotion/HyperFrames/ffmpeg videos from a clean base.
+description: >-
+  Burn or rebuild video subtitles from an approved script while using
+  ASR/Whisper word timings only for alignment, and select one of two locked
+  visual routes: large captions without a rail for talking-head footage, or
+  small single-line captions on a tight blur rail for short-drama narration.
+  Use when captions must preserve exact copy, protected terms, word boundaries,
+  timing, and consistent visual style across Remotion, HyperFrames, or ffmpeg.
 ---
 
 # Script-Aligned Subtitles
@@ -28,6 +34,26 @@ Never trust ASR text for final captions when the user has provided or approved c
 9. Keep left-bound Chinese suffixes with the previous cue even if the cue becomes slightly longer: `的 地 得 了 着 过 里 中 内 外 吗 呢 吧 啊 呀 啦 嘛 么`. Do not treat normal word starters such as `去`, `下次`, `上头`, or `后来` as invalid cue starts.
 10. Burn captions last in the ffmpeg filter chain, after all video overlays and motion graphics.
 11. Generate QC frames or a contact sheet and inspect readability, old subtitle overlap, and placement.
+
+## Two global visual style profiles
+
+Use exactly one profile. Do not inherit visual geometry from an old job, mask
+map, or render cache.
+
+- `talking-head-large-no-rail-1080x1920`: 88 px normal text, 96 px highlight,
+  up to two lines with a 160 px gap, baseline 1450, and no rail. Read
+  [talking-head-large-no-rail.md](references/talking-head-large-no-rail.md).
+- `short-drama-vsr-tight-rail-1080x1920`: 64 px one-line text, baseline 1385,
+  on a full-width blur-only rail at y=1318 with height=90. Apply it only to
+  narration B-roll; preserve source subtitles and add no narration caption on
+  hooks or real dialogue. Read
+  [short-drama-vsr-tight-rail.md](references/short-drama-vsr-tight-rail.md).
+
+Content routing is authoritative: talking-head equals large/no rail;
+short-drama narration equals small/tight blur rail. A mask map controls only
+STTN inpainting rectangles and never caption or visible-rail geometry.
+
+Run `python scripts/validate_visual_profile.py JOB.json` before rendering.
 
 ## Required Invariants
 

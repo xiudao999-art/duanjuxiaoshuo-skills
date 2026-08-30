@@ -1,0 +1,5 @@
+interface:
+  display_name: "VSR 强模糊字幕遮罩"
+  short_description: "用 STTN 擦除硬字幕并生成全宽单行强模糊字幕承载条"
+  default_prompt: "使用 $remove-hard-subtitles-vsr-blur 清理旁白镜头的原生硬字幕，并生成全宽单行强高斯模糊字幕区。"
+

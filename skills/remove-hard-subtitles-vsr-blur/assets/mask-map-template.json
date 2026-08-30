@@ -1,0 +1,9 @@
+{
+  "reviewStatus": "unreviewed",
+  "reviewEvidence": "ABSOLUTE_PATH_TO_CONTACT_SHEET_OR_FRAME_SET",
+  "coordinateSystem": "normalized-1080x1920-full-frame",
+  "defaultMasks": [
+    [1275, 1415, 0, 1079]
+  ],
+  "episodes": {}
+}

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "api_base": "http://8.149.247.100:8088",
+  "expected_bucket": "guuanggao001",
+  "bucket_verified": false,
+  "scope": "manju",
+  "team_name": "REPLACE_WITH_TEAM_NAME",
+  "delivery_time": "2026-08-03 12:00",
+  "entries": [
+    {
+      "local_file": "D:\\path\\to\\01_示例剧（第1集到第4集）_示例标题_约2分钟_QC修复版.mp4",
+      "video_file_name": "01_示例剧（第1集到第4集）_示例标题_约2分钟_QC修复版.mp4",
+      "drama_name": "示例剧",
+      "episode_range": "1-4",
+      "title_name": "示例标题",
+      "status": "planned",
+      "oss_key": null,
+      "submission_id": null,
+      "last_error": null
+    }
+  ]
+}
+

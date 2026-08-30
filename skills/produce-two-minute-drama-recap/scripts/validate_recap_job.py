@@ -7,14 +7,110 @@ from pathlib import Path
 
 
 TURN_TYPES = {"relationship", "evidence", "identity", "goal", "consequence", "allegiance", "none"}
+STORY_TYPES = {"continuous_plot", "character_arc", "relationship_arc", "action_payoff", "mystery_reveal", "special_theme"}
+LENSES = {
+    "linear_escalation", "result_first", "mystery_reveal", "causal_domino",
+    "countdown_rescue", "parallel_contrast", "character_growth", "hidden_identity",
+    "romance_progression", "alliance_betrayal", "villain_downfall", "action_escalation",
+    "status_reversal", "family_redemption", "motif_clue", "dialogue_showdown",
+}
+FAMILY_IDS = {f"F{i:02d}" for i in range(1, 11)}
+
+
+def validate_story_selection(job: dict, known_event_ids: set[str], errors: list[str]) -> None:
+    family_id = job.get("familyId")
+    if family_id not in FAMILY_IDS:
+        errors.append("familyId is required and must be F01 through F10")
+
+    selection = job.get("storySelection") or {}
+    if not str(selection.get("patternId", "")).strip():
+        errors.append("storySelection.patternId is required")
+    if not str(selection.get("hookPromise", "")).strip():
+        errors.append("storySelection.hookPromise is required")
+
+    slots = selection.get("requiredSlots") or []
+    if len(slots) < 5:
+        errors.append("storySelection.requiredSlots must contain at least 5 category-specific slots")
+    slot_names: set[str] = set()
+    slot_event_ids: set[str] = set()
+    for index, slot in enumerate(slots, 1):
+        name = str(slot.get("slot", "")).strip()
+        if not name or name in slot_names:
+            errors.append(f"storySelection required slot {index} must have a unique name")
+        slot_names.add(name)
+        ids = slot.get("eventIds") or []
+        if not ids or any(not str(event_id).strip() for event_id in ids):
+            errors.append(f"storySelection slot {name or index} needs supported eventIds")
+        slot_event_ids.update(str(event_id) for event_id in ids)
+
+    grades = selection.get("eventGrades") or {}
+    graded: dict[str, list[str]] = {}
+    all_graded: list[str] = []
+    for grade in ("A", "B", "C", "D"):
+        values = grades.get(grade)
+        if not isinstance(values, list):
+            errors.append(f"storySelection.eventGrades.{grade} must be a list")
+            values = []
+        clean = [str(event_id) for event_id in values if str(event_id).strip()]
+        graded[grade] = clean
+        all_graded.extend(clean)
+    if len(graded.get("A", [])) < 3:
+        errors.append("storySelection.eventGrades.A must contain at least 3 causal-spine events")
+    if len(all_graded) != len(set(all_graded)):
+        errors.append("an event ID may appear in only one A/B/C/D grade")
+
+    selected = set(graded.get("A", [])) | set(graded.get("B", [])) | set(graded.get("C", []))
+    if not slot_event_ids.issubset(selected):
+        errors.append("required slot eventIds must be selected as A, B, or C rather than D/ungraded")
+    payoff = {str(event_id) for event_id in (selection.get("payoffEvidenceEventIds") or [])}
+    if not payoff:
+        errors.append("storySelection.payoffEvidenceEventIds is required")
+    elif not payoff.issubset(selected):
+        errors.append("payoffEvidenceEventIds must be selected as A, B, or C")
+    if known_event_ids and not selected.issubset(known_event_ids):
+        errors.append("storySelection contains selected event IDs outside job.eventIds")
 
 
 def validate(job: dict) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
 
-    if job.get("schemaVersion") != 1:
-        errors.append("schemaVersion must be 1")
+    schema_version = job.get("schemaVersion")
+    if schema_version not in {1, 2}:
+        errors.append("schemaVersion must be 1 or 2")
+
+    planning_mode = job.get("planningMode", "continuous_arc")
+    if planning_mode not in {"continuous_arc", "overlapping_question"}:
+        errors.append("planningMode must be continuous_arc or overlapping_question")
+    if job.get("storyType") not in STORY_TYPES:
+        errors.append("storyType is required and must use the production taxonomy")
+    if not str(job.get("storyTypeLabel", "")).strip():
+        errors.append("storyTypeLabel is required")
+    if job.get("narrativeLens") not in LENSES:
+        errors.append("narrativeLens is required and unsupported")
+    if not str(job.get("narrativeLensLabel", "")).strip():
+        errors.append("narrativeLensLabel is required")
+    if planning_mode == "overlapping_question":
+        if not str(job.get("seriesPlanWindowId", "")).strip():
+            errors.append("seriesPlanWindowId is required in overlapping_question mode")
+        event_ids = job.get("eventIds") or []
+        core_event_ids = job.get("coreEventIds") or []
+        if len(event_ids) < 6 or len(event_ids) != len(set(event_ids)):
+            errors.append("overlapping_question jobs require at least 6 unique eventIds")
+        if len(core_event_ids) < 3 or len(core_event_ids) != len(set(core_event_ids)):
+            errors.append("overlapping_question jobs require at least 3 unique coreEventIds")
+        if not set(core_event_ids).issubset(set(event_ids)):
+            errors.append("coreEventIds must be a subset of eventIds")
+        if not str(job.get("noveltyRationale", "")).strip():
+            errors.append("noveltyRationale is required in overlapping_question mode")
+        filename = str(job.get("deliveryFilename", "")).strip()
+        if not filename:
+            errors.append("deliveryFilename is required in overlapping_question mode")
+        elif str(job.get("storyTypeLabel")) not in filename or str(job.get("narrativeLensLabel")) not in filename:
+            errors.append("deliveryFilename must include storyTypeLabel and narrativeLensLabel")
+
+    if schema_version == 2:
+        validate_story_selection(job, set(job.get("eventIds") or []), errors)
 
     duration = job.get("targetDurationSeconds")
     if not isinstance(duration, (int, float)) or not 110 <= duration <= 130:

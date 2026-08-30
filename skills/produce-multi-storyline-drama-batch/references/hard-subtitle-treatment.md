@@ -32,6 +32,11 @@ visible remnant. Crop/reframe is not an allowed subtitle-removal policy.
    with only modest repair padding; never reserve a generic lower third.
 3. Process the locked narration shot with YaoFANGUK Video Subtitle Remover in `sttn-auto` mode.
 4. Group clips that share subtitle geometry and run STTN in batches; never inpaint the whole frame blindly.
+   Use one stable series-level `--cache-root` for every recap. Cache identity
+   includes the source file, exact range, masks, rail geometry, 1080×1920
+   output, and 25 fps contract. Skip GPU startup when every requested range is
+   already cached; do not put the persistent cache under a disposable per-job
+   render directory.
 5. Inspect STTN output for readable remnants, smears, duplicated strokes, face/hand damage, and temporal flicker.
 6. Add the locked `short-drama-vsr-tight-rail-1080x1920` Gaussian/frosted blur
    rail and render the new narration caption on top. At 1080x1920 use y=1318,
