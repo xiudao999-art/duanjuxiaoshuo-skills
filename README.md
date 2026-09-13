@@ -6,6 +6,8 @@
 
 | Skill | 用途 |
 |---|---|
+| `index-short-drama-source-content` | 建立全剧逐字稿、人物、场景、事件、镜头和原片时码索引 |
+| `bind-short-drama-script-to-source-clips` | 将已批准故事脚本绑定到索引中的准确原剧片段并输出 EDL |
 | `produce-two-minute-drama-recap` | 制作约两分钟、横跨 4–8 集的短剧解说成片 |
 | `produce-short-drama-highlight` | 根据批准文案制作旁白与完整原剧对白混剪 |
 | `build-ck-highlight-captions` | 生成普通字幕、CK 强调字、弹出动画与同步音效 |
@@ -47,7 +49,9 @@ Copy-Item .\skills\produce-two-minute-drama-recap `
 ## 典型短剧生产链
 
 ```text
-produce-two-minute-drama-recap
+index-short-drama-source-content
+→ produce-two-minute-drama-recap
+→ bind-short-drama-script-to-source-clips
 → minimax-emotional-narration
 → script-aligned-subtitles
 → build-ck-highlight-captions

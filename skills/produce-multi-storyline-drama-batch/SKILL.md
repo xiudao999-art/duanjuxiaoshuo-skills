@@ -16,9 +16,11 @@ Turn one complete drama into every qualified, meaningfully different recap windo
 3. Read `script-aligned-subtitles` before generating captions.
 4. Read `qc-repair-talking-head-video` before final delivery QC.
 5. Use `video-use` or an equivalent word-timed ASR pipeline for source dialogue boundaries.
-6. Read [hard-subtitle-treatment.md](references/hard-subtitle-treatment.md) whenever any source master contains burned subtitles.
-7. Read [narrative-profiles.md](references/narrative-profiles.md) before selecting a story structure. Read [sample-style-story-editing.md](references/sample-style-story-editing.md) only when the selected profile is `P01_dual_time_conflict`.
-8. Read [semantic-visual-alignment.md](references/semantic-visual-alignment.md) before binding narration footage or approving a preview.
+6. Use `index-short-drama-source-content` to build and validate the reusable full-series source index before generating story candidates.
+7. Use `bind-short-drama-script-to-source-clips` after script lock to retrieve reviewed source ranges and emit the beat map and EDL.
+8. Read [hard-subtitle-treatment.md](references/hard-subtitle-treatment.md) whenever any source master contains burned subtitles.
+9. Read [narrative-profiles.md](references/narrative-profiles.md) before selecting a story structure. Read [sample-style-story-editing.md](references/sample-style-story-editing.md) only when the selected profile is `P01_dual_time_conflict`.
+10. Read [semantic-visual-alignment.md](references/semantic-visual-alignment.md) only for compatibility with jobs created before the two indexing/binding skills were extracted.
 
 ## Operating modes
 
@@ -32,6 +34,10 @@ Never pause between batches unless the user asks for a checkpoint.
 
 ### 1. Inventory and transcribe the whole series
 
+This stage is owned by `index-short-drama-source-content`. The rules below are
+the orchestration summary; its validated `source-content-index.json` is the
+authoritative output.
+
 - Accept only canonical numeric episode masters; ignore download duplicates and prior exports.
 - Probe duration, dimensions, FPS, audio, and decode health.
 - Produce a full-text transcript and a word-timed transcript for every episode.
@@ -39,6 +45,10 @@ Never pause between batches unless the user asks for a checkpoint.
 - Build `episode-corpus.json` and record transcript confidence or uncertainty.
 
 ### 2. Build the event and scene ledger before writing scripts
+
+Delegate the ledger, character normalization, shot annotation, stable IDs, and
+component hashes to `index-short-drama-source-content`. Do not create a second
+incompatible ledger inside this batch skill.
 
 Create stable records with:
 
@@ -95,6 +105,10 @@ test. For `P01_dual_time_conflict`, also read
   transcript and event ledger.
 
 ### 6. Bind long continuous visuals at planning time
+
+This stage is owned by `bind-short-drama-script-to-source-clips`. Its reviewed
+beat map and EDL are the only normal source for downstream VSR and rendering.
+The detailed rules below remain for legacy artifact compatibility.
 
 Read [semantic-visual-alignment.md](references/semantic-visual-alignment.md) and
 [event-bound-editing.md](references/event-bound-editing.md). Treat visual

@@ -1,0 +1,4 @@
+interface:
+  display_name: "短剧原片内容索引"
+  short_description: "为整部短剧建立对白场景事件和镜头时码索引"
+  default_prompt: "Use $index-short-drama-source-content to build a complete, reviewed source-content index for this drama."

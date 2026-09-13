@@ -17,6 +17,8 @@ Read these skills before production:
 4. `script-aligned-subtitles` for script-locked caption text.
 5. `build-ck-highlight-captions` for semantic emphasis placement.
 6. `remotion-best-practices` only when the project uses Remotion assembly.
+7. `index-short-drama-source-content` for the reusable full-series source index.
+8. `bind-short-drama-script-to-source-clips` for post-script event/scene/shot retrieval and the locked EDL.
 
 Read [references/narration-method.md](references/narration-method.md) before writing. For a whole-series batch, read [references/whole-series-planning.md](references/whole-series-planning.md) and [references/narrative-lenses.md](references/narrative-lenses.md) before selecting episodes. Read [references/workflow-contract.md](references/workflow-contract.md) before binding media. Read [references/qc-checklist.md](references/qc-checklist.md) before delivery.
 
@@ -50,6 +52,10 @@ python scripts/validate_series_plan.py series-plan.json
 Do not treat a shifted episode range as a new story. Reject two windows when their core-event overlap exceeds the declared threshold or when one can be summarized with the other window's central question.
 
 ## Build the whole-series corpus
+
+Use `index-short-drama-source-content` for this stage. Its validated combined
+index replaces ad-hoc per-job transcript searches and remains reusable across
+all story windows.
 
 Complete these steps before selecting windows in `overlapping_question` mode:
 
@@ -156,6 +162,10 @@ Write the script with locked beats:
 Do not rewrite a locked `★` or `☆` beat after approval unless the user changes it.
 
 ## Bind narration and evidence
+
+After the script is locked, use `bind-short-drama-script-to-source-clips` to
+create reviewed candidates, the narration beat map, and the final EDL. Do not
+search the source again inside the renderer.
 
 1. Generate MiniMax narration in coherent paragraph chunks with one runtime voice ID. Never store credentials in the skill or job.
 2. Preserve raw TTS responses, trimmed WAVs, and a voice manifest.

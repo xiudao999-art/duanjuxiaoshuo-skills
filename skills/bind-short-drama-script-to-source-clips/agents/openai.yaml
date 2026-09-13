@@ -1,0 +1,4 @@
+interface:
+  display_name: "短剧脚本片段绑定"
+  short_description: "将已批准故事脚本绑定到原剧索引中的准确片段"
+  default_prompt: "Use $bind-short-drama-script-to-source-clips to bind this approved story script to reviewed source clips and emit an EDL."

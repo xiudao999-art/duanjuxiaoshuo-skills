@@ -1,0 +1,15 @@
+{
+  "schema": "short-drama-source-index-v1",
+  "series_id": "",
+  "title": "",
+  "episodes": [],
+  "utterances": [],
+  "characters": [],
+  "scenes": [],
+  "events": [],
+  "shots": [],
+  "story_graph": {
+    "edges": []
+  },
+  "component_hashes": {}
+}

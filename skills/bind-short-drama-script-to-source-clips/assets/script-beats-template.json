@@ -1,0 +1,26 @@
+{
+  "schema": "short-drama-script-beats-v1",
+  "video_id": "",
+  "approved_narration_text": "",
+  "narrative_profile": "",
+  "beats": [
+    {
+      "beat_id": "N1-B01",
+      "text": "",
+      "tts_start": 0.0,
+      "tts_end": 0.0,
+      "factual": true,
+      "event_ids": [],
+      "continuity_group": "",
+      "requirements": {
+        "characters": [],
+        "action": "",
+        "location": "",
+        "time_state": "",
+        "emotion": "",
+        "objects": [],
+        "dialogue_state": ""
+      }
+    }
+  ]
+}
